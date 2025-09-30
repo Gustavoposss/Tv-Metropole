@@ -1,0 +1,58 @@
+{
+  "programas": [
+    {
+      "id": 1,
+      "nome": "Bom Dia Metrópole",
+      "descricao": "As primeiras notícias do dia para você começar bem informado.",
+      "icone": "☀️",
+      "hora_inicio": "06:00",
+      "hora_fim": "08:00",
+      "dia": "2024-01-15"
+    },
+    {
+      "id": 2,
+      "nome": "Metrópole Notícias - Manhã",
+      "descricao": "Jornalismo sério e imparcial com os principais fatos da cidade e do mundo.",
+      "icone": "📺",
+      "hora_inicio": "08:00",
+      "hora_fim": "12:00",
+      "dia": "2024-01-15"
+    },
+    {
+      "id": 3,
+      "nome": "Esporte Metrópole",
+      "descricao": "O debate esportivo com análises e comentários sobre seu time do coração.",
+      "icone": "🎮",
+      "hora_inicio": "12:00",
+      "hora_fim": "13:00",
+      "dia": "2024-01-15"
+    },
+    {
+      "id": 4,
+      "nome": "Sessão da Tarde",
+      "descricao": "Filmes que marcaram época para animar sua tarde.",
+      "icone": "🎬",
+      "hora_inicio": "13:00",
+      "hora_fim": "15:00",
+      "dia": "2024-01-15"
+    },
+    {
+      "id": 5,
+      "nome": "Jornal da Metrópole",
+      "descricao": "O resumo completo das notícias mais importantes do dia.",
+      "icone": "📰",
+      "hora_inicio": "19:00",
+      "hora_fim": "20:00",
+      "dia": "2024-01-15"
+    },
+    {
+      "id": 6,
+      "nome": "Cine Metrópole",
+      "descricao": "Grandes sucessos do cinema para fechar sua noite.",
+      "icone": "🎭",
+      "hora_inicio": "22:00",
+      "hora_fim": "00:00",
+      "dia": "2024-01-15"
+    }
+  ]
+}
