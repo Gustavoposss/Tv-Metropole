@@ -8,14 +8,8 @@ export default defineConfig({
   
   // Otimizações de build
   build: {
-    // Compression e minification
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.logs em produção
-        drop_debugger: true,
-      },
-    },
+    // Minification com esbuild (padrão do Vite - mais rápido)
+    minify: 'esbuild',
     
     // Code splitting otimizado
     rollupOptions: {
