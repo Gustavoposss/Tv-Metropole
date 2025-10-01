@@ -53,43 +53,11 @@ const LivePlayer = () => {
     console.log('📱 Mobile:', isMobile);
     console.log('📶 Velocidade:', speed);
 
-    // Função para verificar se o vídeo está travado (DESABILITADA para mobile)
+    // Função para verificar se o vídeo está travado (TOTALMENTE DESABILITADA)
     const startWatchdog = () => {
-      // Mobile: SEM watchdog automático - usuário resolve manualmente
-      if (isMobile) {
-        console.log('🐕 Watchdog DESABILITADO para mobile - usuário resolve manualmente');
-        return;
-      }
-      
-      // Desktop: mantém watchdog
-      let lastTime = 0;
-      let stallCount = 0;
-      
-      watchdogTimer.current = setInterval(() => {
-        if (!video.paused && !video.ended) {
-          const currentTime = video.currentTime;
-          
-          // Se o tempo não mudou, incrementa contador
-          if (currentTime === lastTime) {
-            stallCount++;
-            console.log(`⏳ Stall count: ${stallCount}`);
-            
-            // Só tenta recuperar se travar por 15 segundos (3 verificações de 5s)
-            if (stallCount >= 3) {
-              console.warn('⚠️ Vídeo travado por 15s! Tentando recuperar...');
-              if (hlsRef.current) {
-                hlsRef.current.recoverMediaError();
-              }
-              stallCount = 0; // Reset contador
-            }
-          } else {
-            // Se tempo mudou, reset contador
-            stallCount = 0;
-          }
-          
-          lastTime = currentTime;
-        }
-      }, 5000); // Verifica a cada 5 segundos
+      console.log('🐕 Watchdog TOTALMENTE DESABILITADO - usuário resolve manualmente');
+      // Sistema de watchdog completamente removido
+      // Usuário resolve manualmente com F5
     };
 
     // Configurar HLS - Otimizado para mobile e conexões lentas
@@ -110,8 +78,7 @@ const LivePlayer = () => {
       // FORÇAR modo desktop para mobile WiFi (igual PC)
       const forceDesktopForMobileWifi = isMobile && isWifi;
       
-      // Desabilitar watchdog para mobile WiFi (igual PC)
-      const disableWatchdog = forceDesktopForMobileWifi;
+      // Sistema de watchdog TOTALMENTE removido
       
       // Configurações específicas para mobile (baseadas em melhores práticas)
       const mobileOptimizations = isMobile;
@@ -122,9 +89,9 @@ const LivePlayer = () => {
       console.log('📶 WiFi:', isWifi);
       console.log('💻 Modo Desktop-like:', useDesktopMode);
       console.log('🖥️ Forçar Desktop Mobile WiFi:', forceDesktopForMobileWifi);
-      console.log('🐕 Desabilitar Watchdog:', disableWatchdog);
+      console.log('🐕 Watchdog: TOTALMENTE DESABILITADO');
       console.log('📱 Otimizações Mobile:', mobileOptimizations);
-      console.log('🔄 Recuperação Automática:', isMobile ? 'DESABILITADA (usuário resolve)' : 'ATIVA');
+      console.log('🔄 Recuperação Automática: TOTALMENTE DESABILITADA (usuário resolve)');
       console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : (useDesktopMode ? 'Desktop-like' : 'Mobile Normal'));
       console.log('🔧 Forçar conservador:', forceConservativeMode);
       
@@ -196,13 +163,8 @@ const LivePlayer = () => {
               console.log('✅ Reprodução iniciada automaticamente');
               setIsLoading(false);
               setError(null);
-              // Só inicia watchdog se não for mobile WiFi
-              if (!disableWatchdog) {
-                startWatchdog(); // Iniciar watchdog
-                console.log('🐕 Watchdog iniciado');
-              } else {
-                console.log('🐕 Watchdog desabilitado (Mobile WiFi = Desktop)');
-              }
+              // Sistema de watchdog TOTALMENTE removido
+              console.log('🐕 Watchdog TOTALMENTE DESABILITADO - usuário resolve manualmente');
             })
             .catch((err) => {
               console.warn('⚠️ Autoplay bloqueado:', err.message);
@@ -248,63 +210,13 @@ const LivePlayer = () => {
         }
       });
 
-      // Tratamento de erros - Mobile SEM recuperação automática
+      // Tratamento de erros - SEM recuperação automática (TOTALMENTE DESABILITADA)
       hls.on(Hls.Events.ERROR, (event, data) => {
         console.error('❌ HLS Error:', data.type, data.details);
         
-        // Mobile: SEM recuperação automática - usuário resolve manualmente
-        if (isMobile) {
-          console.log('📱 Mobile: SEM recuperação automática - usuário resolve manualmente');
-          setError('Erro na transmissão. Recarregue a página (F5).');
-          return;
-        }
-        
-        // Desktop: mantém recuperação automática
-        if (data.fatal) {
-          recoveryAttempts.current++;
-          
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              console.log(`🔄 Erro de rede (tentativa ${recoveryAttempts.current})...`);
-              
-              const maxRetries = forceConservativeMode ? 20 : 10; // Mais tentativas só se conexão lenta
-              if (recoveryAttempts.current < maxRetries) {
-                const retryDelay = forceConservativeMode ? 500 : 1000; // Retry mais rápido só se conexão lenta
-                setTimeout(() => {
-                  console.log('🔄 Tentando recarregar...');
-                  // FORÇAR qualidade mínima APENAS se conexão lenta
-                  if (forceConservativeMode) {
-                    hls.currentLevel = 0;
-                    hls.startLevel = 0;
-                  }
-                  hls.startLoad();
-                }, retryDelay);
-              } else {
-                setError('Erro de conexão. Verifique sua internet.');
-              }
-              break;
-              
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              console.log(`🔄 Erro de mídia (tentativa ${recoveryAttempts.current})...`);
-              
-              if (recoveryAttempts.current < (forceConservativeMode ? 20 : 10)) {
-                // FORÇAR qualidade mínima APENAS se conexão lenta
-                if (forceConservativeMode) {
-                  hls.currentLevel = 0;
-                }
-                hls.recoverMediaError();
-              } else {
-                setError('Erro na transmissão. Recarregue a página.');
-              }
-              break;
-              
-            default:
-              console.log('❌ Erro irrecuperável');
-              setError('Erro ao carregar a transmissão');
-              hls.destroy();
-              break;
-          }
-        }
+        // Sistema de recuperação automática TOTALMENTE removido
+        console.log('🔄 Recuperação automática DESABILITADA - usuário resolve manualmente');
+        setError('Erro na transmissão. Recarregue a página (F5).');
       });
 
       // Reset contador de tentativas quando conseguir carregar
@@ -354,27 +266,13 @@ const LivePlayer = () => {
       
       video.src = streamUrl;
       
-      // Listener para erros de rede - Mobile SEM retry automático
+      // Listener para erros de rede - SEM retry automático (TOTALMENTE DESABILITADO)
       video.addEventListener('error', (e) => {
         console.error('❌ Safari: erro de vídeo', e);
         
-        // Mobile: SEM retry automático - usuário resolve manualmente
-        if (isMobile) {
-          console.log('📱 Mobile Safari: SEM retry automático - usuário resolve manualmente');
-          setError('Erro de vídeo. Recarregue a página (F5).');
-          return;
-        }
-        
-        // Desktop: mantém retry automático
-        if (video.error) {
-          console.error('Código do erro:', video.error.code);
-          // Tentar recarregar
-          setTimeout(() => {
-            console.log('🔄 Tentando recarregar...');
-            video.load();
-            video.play().catch(err => console.warn('Erro ao reproduzir:', err));
-          }, 2000);
-        }
+        // Sistema de retry automático TOTALMENTE removido
+        console.log('🔄 Retry automático DESABILITADO - usuário resolve manualmente');
+        setError('Erro de vídeo. Recarregue a página (F5).');
       });
       
       video.addEventListener('loadedmetadata', () => {
@@ -384,13 +282,8 @@ const LivePlayer = () => {
             console.log('✅ Safari: reprodução iniciada');
             setIsLoading(false);
             setError(null);
-            // Só inicia watchdog se não for mobile WiFi
-            if (!disableWatchdog) {
-              startWatchdog();
-              console.log('🐕 Watchdog iniciado (Safari)');
-            } else {
-              console.log('🐕 Watchdog desabilitado (Safari Mobile WiFi = Desktop)');
-            }
+            // Sistema de watchdog TOTALMENTE removido
+            console.log('🐕 Watchdog TOTALMENTE DESABILITADO (Safari) - usuário resolve manualmente');
           })
           .catch((err) => {
             console.warn('⚠️ Safari: autoplay bloqueado -', err.message);
@@ -398,19 +291,13 @@ const LivePlayer = () => {
           });
       });
       
-      // Listener para stalling em Safari - Mobile SEM recuperação automática
+      // Listener para stalling em Safari - SEM recuperação automática (TOTALMENTE DESABILITADA)
       video.addEventListener('stalled', () => {
         console.warn('⚠️ Safari: stream travado');
         
-        // Mobile: SEM recuperação automática - usuário resolve manualmente
-        if (isMobile) {
-          console.log('📱 Mobile Safari: SEM recuperação automática - usuário resolve manualmente');
-          setError('Stream travado. Recarregue a página (F5).');
-          return;
-        }
-        
-        // Desktop: mantém comportamento normal
-        setIsLoading(true);
+        // Sistema de recuperação automática TOTALMENTE removido
+        console.log('🔄 Recuperação automática DESABILITADA - usuário resolve manualmente');
+        setError('Stream travado. Recarregue a página (F5).');
       });
       
       video.addEventListener('waiting', () => {
