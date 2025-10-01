@@ -11,6 +11,11 @@ const LivePlayer = () => {
   const recoveryAttempts = useRef(0);
   const watchdogTimer = useRef(null);
 
+  // Detectar se é dispositivo mobile
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
   // Detectar velocidade de conexão
   const detectConnectionSpeed = () => {
     if ('connection' in navigator) {
@@ -22,8 +27,10 @@ const LivePlayer = () => {
         return effectiveType;
       }
     }
-    setConnectionSpeed('unknown');
-    return 'unknown';
+    // Se não detectar, assume 3g em mobile
+    const fallback = isMobileDevice() ? '3g' : '4g';
+    setConnectionSpeed(fallback);
+    return fallback;
   };
 
   useEffect(() => {
@@ -32,8 +39,12 @@ const LivePlayer = () => {
 
     const streamUrl = 'https://cdn-fundacao-2110.ciclano.io:1443/fundacao-2110/fundacao-2110/playlist.m3u8';
     
-    // Detectar velocidade de conexão no início
+    // Detectar velocidade de conexão e dispositivo
     const speed = detectConnectionSpeed();
+    const isMobile = isMobileDevice();
+    
+    console.log('📱 Mobile:', isMobile);
+    console.log('📶 Velocidade:', speed);
 
     // Função para verificar se o vídeo está travado
     const startWatchdog = () => {
@@ -56,49 +67,66 @@ const LivePlayer = () => {
       }, 5000); // Verifica a cada 5 segundos
     };
 
-    // Configurar HLS - Otimizado para conexões lentas
+    // Configurar HLS - Otimizado para mobile e conexões lentas
     if (Hls.isSupported()) {
       console.log('🎬 Iniciando HLS.js...');
-      console.log('📶 Velocidade detectada:', speed);
       
-      // Configurações adaptativas baseadas na conexão
+      // Configurações adaptativas baseadas na conexão e dispositivo
       const isSlowConnection = speed === '2g' || speed === 'slow-2g' || speed === '3g';
+      const isMobileOrSlow = isMobile || isSlowConnection;
+      
+      // FORÇAR modo conservador se for mobile (mesmo com WiFi)
+      const forceConservativeMode = isMobile;
+      
+      console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile Conservador' : 'Desktop');
+      console.log('🔧 Forçar conservador:', forceConservativeMode);
       
       const hls = new Hls({
         // Configurações gerais
         enableWorker: true,
-        lowLatencyMode: false, // Desativado para priorizar estabilidade
+        lowLatencyMode: false,
         debug: false,
         
-        // Buffer adaptativo - Maior para conexões lentas
-        maxBufferLength: isSlowConnection ? 60 : 30, // 60s para 3G, 30s para 4G+
-        maxMaxBufferLength: isSlowConnection ? 120 : 60,
-        maxBufferSize: 60 * 1000 * 1000,
-        maxBufferHole: 0.5,
-        backBufferLength: 30, // Reduzido de 90 para economizar memória
+        // Buffer ULTRA REDUZIDO para mobile - inicia MUITO mais rápido
+        maxBufferLength: forceConservativeMode ? 10 : 30, // ULTRA REDUZIDO: 10s mobile!
+        maxMaxBufferLength: forceConservativeMode ? 20 : 60, // ULTRA REDUZIDO
+        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : 60 * 1000 * 1000, // 20MB mobile
+        maxBufferHole: 0.1, // MUITO tolerante a "buracos"
+        backBufferLength: forceConservativeMode ? 5 : 20, // Mínimo em mobile
         
-        // Configurações de ABR (Adaptive Bitrate)
-        abrEwmaDefaultEstimate: isSlowConnection ? 500000 : 5000000, // Começa com estimativa baixa em 3G
-        abrBandWidthFactor: 0.95,
-        abrBandWidthUpFactor: 0.7,
+        // ABR ULTRA conservador para mobile
+        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : 5000000, // 200kbps mobile!
+        abrBandWidthFactor: forceConservativeMode ? 0.6 : 0.95, // MUITO conservador
+        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : 0.7, // Sobe MUITO devagar
         abrMaxWithRealBitrate: true,
+        abrEwmaFastLive: forceConservativeMode ? 1.5 : 3.0, // Reage MUITO rápido
+        abrEwmaSlowLive: forceConservativeMode ? 3.0 : 9.0, // Adapta MUITO devagar
         
-        // Recuperação e retry - Mais tolerante
-        capLevelToPlayerSize: true, // Não carrega qualidade maior que o player
-        nudgeMaxRetry: 10,
-        manifestLoadingTimeOut: 30000, // Aumentado de 20s para 30s
-        manifestLoadingMaxRetry: 8, // Mais tentativas
-        levelLoadingTimeOut: 30000,
-        levelLoadingMaxRetry: 8,
-        fragLoadingTimeOut: 40000, // Aumentado de 30s para 40s
-        fragLoadingMaxRetry: 8,
+        // Recuperação ULTRA agressiva para mobile
+        capLevelToPlayerSize: true,
+        capLevelOnFPSDrop: forceConservativeMode, // Drop de FPS força qualidade menor
+        nudgeMaxRetry: forceConservativeMode ? 20 : 15, // AINDA mais tentativas
+        manifestLoadingTimeOut: forceConservativeMode ? 10000 : 20000, // ULTRA REDUZIDO
+        manifestLoadingMaxRetry: forceConservativeMode ? 15 : 10,
+        levelLoadingTimeOut: forceConservativeMode ? 10000 : 20000, // ULTRA REDUZIDO
+        levelLoadingMaxRetry: forceConservativeMode ? 15 : 10,
+        fragLoadingTimeOut: forceConservativeMode ? 10000 : 20000, // ULTRA REDUZIDO
+        fragLoadingMaxRetry: forceConservativeMode ? 15 : 10,
         
-        // Otimizações adicionais
-        highBufferWatchdogPeriod: 3, // Aumentado de 2 para 3
-        startLevel: isSlowConnection ? 0 : -1, // Começa na qualidade mais baixa em 3G
+        // Otimizações ULTRA mobile
+        highBufferWatchdogPeriod: forceConservativeMode ? 1 : 2, // Verifica mais frequentemente
+        startLevel: forceConservativeMode ? 0 : -1, // SEMPRE qualidade mínima
+        testBandwidth: true,
+        progressive: true,
+        
+        // Configurações extras para mobile
+        liveSyncDurationCount: forceConservativeMode ? 1 : 3, // Menos fragmentos em live
+        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : 5, // Menor latência
         
         xhrSetup: function(xhr) {
           xhr.withCredentials = false;
+          // Timeout ULTRA curto em mobile
+          xhr.timeout = forceConservativeMode ? 8000 : 30000; // 8s mobile!
         }
       });
 
@@ -138,10 +166,27 @@ const LivePlayer = () => {
           const quality = `${level.height}p`;
           setCurrentQuality(quality);
           console.log('📊 Qualidade alterada para:', quality);
+          
+          // FORÇAR qualidade baixa em mobile se subir muito
+          if (forceConservativeMode && level.height > 480) {
+            console.log('⚠️ Mobile: Forçando qualidade menor (era', quality, ')');
+            setTimeout(() => {
+              hls.currentLevel = 0; // Força qualidade mínima
+            }, 1000);
+          }
+        }
+      });
+      
+      // FORÇAR qualidade baixa em mobile após carregar
+      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+        if (forceConservativeMode) {
+          console.log('🔧 Mobile: Forçando qualidade mínima');
+          hls.currentLevel = 0; // Força qualidade mínima
+          hls.startLevel = 0; // Garante que comece baixo
         }
       });
 
-      // Tratamento de erros
+      // Tratamento de erros ULTRA agressivo para mobile
       hls.on(Hls.Events.ERROR, (event, data) => {
         console.error('❌ HLS Error:', data.type, data.details);
         
@@ -152,11 +197,18 @@ const LivePlayer = () => {
             case Hls.ErrorTypes.NETWORK_ERROR:
               console.log(`🔄 Erro de rede (tentativa ${recoveryAttempts.current})...`);
               
-              if (recoveryAttempts.current < 10) {
+              const maxRetries = forceConservativeMode ? 20 : 10; // Mais tentativas em mobile
+              if (recoveryAttempts.current < maxRetries) {
+                const retryDelay = forceConservativeMode ? 500 : 1000; // Retry mais rápido em mobile
                 setTimeout(() => {
                   console.log('🔄 Tentando recarregar...');
+                  // FORÇAR qualidade mínima em mobile após erro
+                  if (forceConservativeMode) {
+                    hls.currentLevel = 0;
+                    hls.startLevel = 0;
+                  }
                   hls.startLoad();
-                }, 1000);
+                }, retryDelay);
               } else {
                 setError('Erro de conexão. Verifique sua internet.');
               }
@@ -165,7 +217,11 @@ const LivePlayer = () => {
             case Hls.ErrorTypes.MEDIA_ERROR:
               console.log(`🔄 Erro de mídia (tentativa ${recoveryAttempts.current})...`);
               
-              if (recoveryAttempts.current < 10) {
+              if (recoveryAttempts.current < (forceConservativeMode ? 20 : 10)) {
+                // FORÇAR qualidade mínima antes de recuperar
+                if (forceConservativeMode) {
+                  hls.currentLevel = 0;
+                }
                 hls.recoverMediaError();
               } else {
                 setError('Erro na transmissão. Recarregue a página.');
@@ -210,22 +266,68 @@ const LivePlayer = () => {
       });
 
     } 
-    // Fallback Safari
+    // Fallback Safari/iOS - HLS Nativo
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      console.log('🍎 Usando suporte nativo HLS (Safari)');
+      console.log('🍎 Usando suporte nativo HLS (Safari/iOS)');
+      console.log('📱 Mobile:', isMobile);
+      
+      // Configurar atributos para melhor performance em mobile
+      if (isMobile) {
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.preload = 'auto'; // Preload em mobile Safari
+      }
+      
       video.src = streamUrl;
       
+      // Listener para erros de rede
+      video.addEventListener('error', (e) => {
+        console.error('❌ Safari: erro de vídeo', e);
+        if (video.error) {
+          console.error('Código do erro:', video.error.code);
+          // Tentar recarregar
+          setTimeout(() => {
+            console.log('🔄 Tentando recarregar...');
+            video.load();
+            video.play().catch(err => console.warn('Erro ao reproduzir:', err));
+          }, 2000);
+        }
+      });
+      
       video.addEventListener('loadedmetadata', () => {
+        console.log('✅ Safari: metadata carregada');
         video.play()
           .then(() => {
             console.log('✅ Safari: reprodução iniciada');
             setIsLoading(false);
+            setError(null);
             startWatchdog();
           })
           .catch((err) => {
-            console.warn('⚠️ Safari: autoplay bloqueado');
+            console.warn('⚠️ Safari: autoplay bloqueado -', err.message);
             setIsLoading(false);
           });
+      });
+      
+      // Listener para stalling em Safari
+      video.addEventListener('stalled', () => {
+        console.warn('⚠️ Safari: stream travado');
+        setIsLoading(true);
+      });
+      
+      video.addEventListener('waiting', () => {
+        console.log('⏳ Safari: buffering...');
+        setIsLoading(true);
+      });
+      
+      video.addEventListener('playing', () => {
+        console.log('▶️ Safari: reproduzindo');
+        setIsLoading(false);
+      });
+      
+      video.addEventListener('canplay', () => {
+        console.log('✅ Safari: pode reproduzir');
+        setIsLoading(false);
       });
     } 
     else {
