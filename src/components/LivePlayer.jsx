@@ -21,13 +21,20 @@ const LivePlayer = () => {
     if ('connection' in navigator) {
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       const effectiveType = connection?.effectiveType;
+      const type = connection?.type;
+      
+      // Detectar WiFi
+      if (type === 'wifi' || type === 'ethernet') {
+        setConnectionSpeed('wifi');
+        return 'wifi';
+      }
       
       if (effectiveType) {
         setConnectionSpeed(effectiveType);
         return effectiveType;
       }
     }
-    // Se não detectar, assume 4g (não 3g!)
+    // Se não detectar, assume 4g
     const fallback = '4g';
     setConnectionSpeed(fallback);
     return fallback;
@@ -73,15 +80,21 @@ const LivePlayer = () => {
       
       // Configurações adaptativas baseadas na conexão e dispositivo
       const isSlowConnection = speed === '2g' || speed === 'slow-2g' || speed === '3g';
+      const isWifi = speed === 'wifi';
       const isMobileOrSlow = isMobile && isSlowConnection; // SÓ mobile + conexão lenta
       
-      // Modo conservador APENAS se mobile E conexão lenta
-      const forceConservativeMode = isMobileOrSlow;
+      // Modo conservador APENAS se mobile E conexão lenta (NÃO WiFi)
+      const forceConservativeMode = isMobileOrSlow && !isWifi;
+      
+      // Modo desktop-like para mobile com WiFi
+      const useDesktopMode = isWifi || (!isMobile);
       
       console.log('📱 Mobile:', isMobile);
       console.log('📶 Velocidade:', speed);
       console.log('🐌 Conexão lenta:', isSlowConnection);
-      console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : 'Normal');
+      console.log('📶 WiFi:', isWifi);
+      console.log('💻 Modo Desktop-like:', useDesktopMode);
+      console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : (useDesktopMode ? 'Desktop-like' : 'Mobile Normal'));
       console.log('🔧 Forçar conservador:', forceConservativeMode);
       
       const hls = new Hls({
@@ -91,45 +104,45 @@ const LivePlayer = () => {
         debug: false,
         
         // Buffer inteligente baseado na conexão
-        maxBufferLength: forceConservativeMode ? 10 : (isMobile ? 20 : 30), // 10s só se mobile+lento
-        maxMaxBufferLength: forceConservativeMode ? 20 : (isMobile ? 40 : 60),
-        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : (isMobile ? 30 * 1000 * 1000 : 60 * 1000 * 1000),
+        maxBufferLength: forceConservativeMode ? 10 : (useDesktopMode ? 30 : 20), // Desktop-like para WiFi
+        maxMaxBufferLength: forceConservativeMode ? 20 : (useDesktopMode ? 60 : 40),
+        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : (useDesktopMode ? 60 * 1000 * 1000 : 30 * 1000 * 1000),
         maxBufferHole: forceConservativeMode ? 0.1 : 0.5,
-        backBufferLength: forceConservativeMode ? 5 : (isMobile ? 10 : 20),
+        backBufferLength: forceConservativeMode ? 5 : (useDesktopMode ? 20 : 10),
         
-        // ABR inteligente
-        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : (isMobile ? 500000 : 5000000),
-        abrBandWidthFactor: forceConservativeMode ? 0.6 : (isMobile ? 0.8 : 0.95),
-        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : (isMobile ? 0.5 : 0.7),
+        // ABR inteligente - Desktop-like para WiFi
+        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : (useDesktopMode ? 5000000 : 500000),
+        abrBandWidthFactor: forceConservativeMode ? 0.6 : (useDesktopMode ? 0.95 : 0.8),
+        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : (useDesktopMode ? 0.7 : 0.5),
         abrMaxWithRealBitrate: true,
-        abrEwmaFastLive: forceConservativeMode ? 1.5 : (isMobile ? 2.0 : 3.0),
-        abrEwmaSlowLive: forceConservativeMode ? 3.0 : (isMobile ? 4.0 : 9.0),
+        abrEwmaFastLive: forceConservativeMode ? 1.5 : (useDesktopMode ? 3.0 : 2.0),
+        abrEwmaSlowLive: forceConservativeMode ? 3.0 : (useDesktopMode ? 9.0 : 4.0),
         
         // Recuperação inteligente
         capLevelToPlayerSize: true,
         capLevelOnFPSDrop: forceConservativeMode,
-        nudgeMaxRetry: forceConservativeMode ? 20 : (isMobile ? 15 : 10),
-        manifestLoadingTimeOut: forceConservativeMode ? 10000 : (isMobile ? 20000 : 30000),
-        manifestLoadingMaxRetry: forceConservativeMode ? 15 : (isMobile ? 10 : 8),
-        levelLoadingTimeOut: forceConservativeMode ? 10000 : (isMobile ? 20000 : 30000),
-        levelLoadingMaxRetry: forceConservativeMode ? 15 : (isMobile ? 10 : 8),
-        fragLoadingTimeOut: forceConservativeMode ? 10000 : (isMobile ? 20000 : 30000),
-        fragLoadingMaxRetry: forceConservativeMode ? 15 : (isMobile ? 10 : 8),
+        nudgeMaxRetry: forceConservativeMode ? 20 : (useDesktopMode ? 10 : 15),
+        manifestLoadingTimeOut: forceConservativeMode ? 10000 : (useDesktopMode ? 30000 : 20000),
+        manifestLoadingMaxRetry: forceConservativeMode ? 15 : (useDesktopMode ? 8 : 10),
+        levelLoadingTimeOut: forceConservativeMode ? 10000 : (useDesktopMode ? 30000 : 20000),
+        levelLoadingMaxRetry: forceConservativeMode ? 15 : (useDesktopMode ? 8 : 10),
+        fragLoadingTimeOut: forceConservativeMode ? 10000 : (useDesktopMode ? 30000 : 20000),
+        fragLoadingMaxRetry: forceConservativeMode ? 15 : (useDesktopMode ? 8 : 10),
         
         // Otimizações inteligentes
         highBufferWatchdogPeriod: forceConservativeMode ? 1 : 2,
-        startLevel: forceConservativeMode ? 0 : (isMobile ? 0 : -1), // Mobile começa baixo, desktop automático
+        startLevel: forceConservativeMode ? 0 : (useDesktopMode ? -1 : 0), // Desktop-like automático, mobile baixo
         testBandwidth: true,
         progressive: true,
         
         // Configurações extras
-        liveSyncDurationCount: forceConservativeMode ? 1 : (isMobile ? 2 : 3),
-        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : (isMobile ? 3 : 5),
+        liveSyncDurationCount: forceConservativeMode ? 1 : (useDesktopMode ? 3 : 2),
+        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : (useDesktopMode ? 5 : 3),
         
         xhrSetup: function(xhr) {
           xhr.withCredentials = false;
           // Timeout inteligente
-          xhr.timeout = forceConservativeMode ? 8000 : (isMobile ? 15000 : 30000);
+          xhr.timeout = forceConservativeMode ? 8000 : (useDesktopMode ? 30000 : 15000);
         }
       });
 
@@ -180,14 +193,17 @@ const LivePlayer = () => {
         }
       });
       
-      // FORÇAR qualidade baixa APENAS se mobile + conexão lenta
+      // Configuração inteligente de qualidade inicial
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         if (forceConservativeMode) {
           console.log('🔧 Mobile + Conexão Lenta: Forçando qualidade mínima');
           hls.currentLevel = 0; // Força qualidade mínima
           hls.startLevel = 0; // Garante que comece baixo
-        } else if (isMobile) {
-          console.log('📱 Mobile + WiFi Bom: Começando com qualidade baixa (não forçada)');
+        } else if (useDesktopMode) {
+          console.log('💻 Desktop-like (WiFi/Desktop): Qualidade automática');
+          hls.startLevel = -1; // Qualidade automática como desktop
+        } else {
+          console.log('📱 Mobile Normal: Começando baixo mas pode subir');
           hls.startLevel = 0; // Mobile começa baixo mas pode subir
         }
       });
@@ -375,6 +391,7 @@ const LivePlayer = () => {
       '3g': '3G',
       '4g': '4G',
       '5g': '5G',
+      'wifi': 'WiFi',
       'unknown': 'Desconhecida',
       'checking': 'Verificando...'
     };
@@ -388,6 +405,7 @@ const LivePlayer = () => {
       '3g': 'text-yellow-400',
       '4g': 'text-green-400',
       '5g': 'text-green-400',
+      'wifi': 'text-blue-400',
     };
     return colors[connectionSpeed] || 'text-gray-400';
   };
