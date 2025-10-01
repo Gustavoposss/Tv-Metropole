@@ -16,6 +16,11 @@ const LivePlayer = () => {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   };
 
+  // Detectar se é iOS (iPhone/iPad)
+  const isIOSDevice = () => {
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  };
+
   // Detectar velocidade de conexão
   const detectConnectionSpeed = () => {
     if ('connection' in navigator) {
@@ -49,8 +54,10 @@ const LivePlayer = () => {
     // Detectar velocidade de conexão e dispositivo
     const speed = detectConnectionSpeed();
     const isMobile = isMobileDevice();
+    const isIOS = isIOSDevice();
     
     console.log('📱 Mobile:', isMobile);
+    console.log('🍎 iOS:', isIOS);
     console.log('📶 Velocidade:', speed);
 
     // Função para verificar se o vídeo está travado (TOTALMENTE DESABILITADA)
@@ -83,7 +90,11 @@ const LivePlayer = () => {
       // Configurações específicas para mobile (baseadas em melhores práticas)
       const mobileOptimizations = isMobile;
       
+      // Configurações específicas para iOS (iPhone/iPad)
+      const iosOptimizations = isIOS;
+      
       console.log('📱 Mobile:', isMobile);
+      console.log('🍎 iOS:', isIOS);
       console.log('📶 Velocidade:', speed);
       console.log('🐌 Conexão lenta:', isSlowConnection);
       console.log('📶 WiFi:', isWifi);
@@ -91,6 +102,7 @@ const LivePlayer = () => {
       console.log('🖥️ Forçar Desktop Mobile WiFi:', forceDesktopForMobileWifi);
       console.log('🐕 Watchdog: TOTALMENTE DESABILITADO');
       console.log('📱 Otimizações Mobile:', mobileOptimizations);
+      console.log('🍎 Otimizações iOS:', iosOptimizations);
       console.log('🔄 Recuperação Automática: TOTALMENTE DESABILITADA (usuário resolve)');
       console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : (useDesktopMode ? 'Desktop-like' : 'Mobile Normal'));
       console.log('🔧 Forçar conservador:', forceConservativeMode);
@@ -101,46 +113,46 @@ const LivePlayer = () => {
         lowLatencyMode: false,
         debug: false,
         
-        // Buffer otimizado para mobile (baseado em melhores práticas)
-        maxBufferLength: forceConservativeMode ? 10 : (mobileOptimizations ? 15 : 30), // Mobile: 15s, Desktop: 30s
-        maxMaxBufferLength: forceConservativeMode ? 20 : (mobileOptimizations ? 30 : 60), // Mobile: 30s, Desktop: 60s
-        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : (mobileOptimizations ? 30 * 1000 * 1000 : 60 * 1000 * 1000), // Mobile: 30MB, Desktop: 60MB
-        maxBufferHole: forceConservativeMode ? 0.1 : (mobileOptimizations ? 0.3 : 0.5), // Mobile: mais tolerante
-        backBufferLength: forceConservativeMode ? 5 : (mobileOptimizations ? 10 : 20), // Mobile: 10s, Desktop: 20s
+        // Buffer otimizado para iOS (baseado em melhores práticas)
+        maxBufferLength: forceConservativeMode ? 10 : (iosOptimizations ? 8 : (mobileOptimizations ? 15 : 30)), // iOS: 8s, Mobile: 15s, Desktop: 30s
+        maxMaxBufferLength: forceConservativeMode ? 20 : (iosOptimizations ? 15 : (mobileOptimizations ? 30 : 60)), // iOS: 15s, Mobile: 30s, Desktop: 60s
+        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : (iosOptimizations ? 15 * 1000 * 1000 : (mobileOptimizations ? 30 * 1000 * 1000 : 60 * 1000 * 1000)), // iOS: 15MB, Mobile: 30MB, Desktop: 60MB
+        maxBufferHole: forceConservativeMode ? 0.1 : (iosOptimizations ? 0.2 : (mobileOptimizations ? 0.3 : 0.5)), // iOS: mais tolerante
+        backBufferLength: forceConservativeMode ? 5 : (iosOptimizations ? 5 : (mobileOptimizations ? 10 : 20)), // iOS: 5s, Mobile: 10s, Desktop: 20s
         
-        // ABR otimizado para mobile (baseado em melhores práticas)
-        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : (mobileOptimizations ? 1000000 : 5000000), // Mobile: 1Mbps, Desktop: 5Mbps
-        abrBandWidthFactor: forceConservativeMode ? 0.6 : (mobileOptimizations ? 0.8 : 0.95), // Mobile: mais conservador
-        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : (mobileOptimizations ? 0.5 : 0.7), // Mobile: sobe devagar
+        // ABR otimizado para iOS (baseado em melhores práticas)
+        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : (iosOptimizations ? 500000 : (mobileOptimizations ? 1000000 : 5000000)), // iOS: 500kbps, Mobile: 1Mbps, Desktop: 5Mbps
+        abrBandWidthFactor: forceConservativeMode ? 0.6 : (iosOptimizations ? 0.7 : (mobileOptimizations ? 0.8 : 0.95)), // iOS: mais conservador
+        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : (iosOptimizations ? 0.4 : (mobileOptimizations ? 0.5 : 0.7)), // iOS: sobe muito devagar
         abrMaxWithRealBitrate: true,
-        abrEwmaFastLive: forceConservativeMode ? 1.5 : (mobileOptimizations ? 2.0 : 3.0), // Mobile: reage mais rápido
-        abrEwmaSlowLive: forceConservativeMode ? 3.0 : (mobileOptimizations ? 5.0 : 9.0), // Mobile: adapta mais devagar
+        abrEwmaFastLive: forceConservativeMode ? 1.5 : (iosOptimizations ? 1.8 : (mobileOptimizations ? 2.0 : 3.0)), // iOS: reage mais rápido
+        abrEwmaSlowLive: forceConservativeMode ? 3.0 : (iosOptimizations ? 4.0 : (mobileOptimizations ? 5.0 : 9.0)), // iOS: adapta mais devagar
         
-        // Recuperação otimizada para mobile (baseado em melhores práticas)
+        // Recuperação otimizada para iOS (baseado em melhores práticas)
         capLevelToPlayerSize: true,
         capLevelOnFPSDrop: forceConservativeMode,
-        nudgeMaxRetry: forceConservativeMode ? 20 : (mobileOptimizations ? 15 : 10), // Mobile: 15x, Desktop: 10x
-        manifestLoadingTimeOut: forceConservativeMode ? 10000 : (mobileOptimizations ? 20000 : 30000), // Mobile: 20s, Desktop: 30s
-        manifestLoadingMaxRetry: forceConservativeMode ? 15 : (mobileOptimizations ? 10 : 8), // Mobile: 10x, Desktop: 8x
-        levelLoadingTimeOut: forceConservativeMode ? 10000 : (mobileOptimizations ? 20000 : 30000), // Mobile: 20s, Desktop: 30s
-        levelLoadingMaxRetry: forceConservativeMode ? 15 : (mobileOptimizations ? 10 : 8), // Mobile: 10x, Desktop: 8x
-        fragLoadingTimeOut: forceConservativeMode ? 10000 : (mobileOptimizations ? 20000 : 30000), // Mobile: 20s, Desktop: 30s
-        fragLoadingMaxRetry: forceConservativeMode ? 15 : (mobileOptimizations ? 10 : 8), // Mobile: 10x, Desktop: 8x
+        nudgeMaxRetry: forceConservativeMode ? 20 : (iosOptimizations ? 20 : (mobileOptimizations ? 15 : 10)), // iOS: 20x, Mobile: 15x, Desktop: 10x
+        manifestLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 15000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 15s, Mobile: 20s, Desktop: 30s
+        manifestLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 12 : (mobileOptimizations ? 10 : 8)), // iOS: 12x, Mobile: 10x, Desktop: 8x
+        levelLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 15000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 15s, Mobile: 20s, Desktop: 30s
+        levelLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 12 : (mobileOptimizations ? 10 : 8)), // iOS: 12x, Mobile: 10x, Desktop: 8x
+        fragLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 15000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 15s, Mobile: 20s, Desktop: 30s
+        fragLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 12 : (mobileOptimizations ? 10 : 8)), // iOS: 12x, Mobile: 10x, Desktop: 8x
         
-        // Otimizações específicas para mobile (baseado em melhores práticas)
-        highBufferWatchdogPeriod: forceConservativeMode ? 1 : (mobileOptimizations ? 3 : 2), // Mobile: 3s, Desktop: 2s
-        startLevel: forceConservativeMode ? 0 : (mobileOptimizations ? 0 : -1), // Mobile: começa baixo, Desktop: automático
+        // Otimizações específicas para iOS (baseado em melhores práticas)
+        highBufferWatchdogPeriod: forceConservativeMode ? 1 : (iosOptimizations ? 4 : (mobileOptimizations ? 3 : 2)), // iOS: 4s, Mobile: 3s, Desktop: 2s
+        startLevel: forceConservativeMode ? 0 : (iosOptimizations ? 0 : (mobileOptimizations ? 0 : -1)), // iOS: começa baixo, Mobile: começa baixo, Desktop: automático
         testBandwidth: true,
         progressive: true,
         
-        // Configurações específicas para mobile
-        liveSyncDurationCount: forceConservativeMode ? 1 : (mobileOptimizations ? 2 : 3), // Mobile: 2, Desktop: 3
-        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : (mobileOptimizations ? 3 : 5), // Mobile: 3, Desktop: 5
+        // Configurações específicas para iOS
+        liveSyncDurationCount: forceConservativeMode ? 1 : (iosOptimizations ? 1 : (mobileOptimizations ? 2 : 3)), // iOS: 1, Mobile: 2, Desktop: 3
+        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : (iosOptimizations ? 2 : (mobileOptimizations ? 3 : 5)), // iOS: 2, Mobile: 3, Desktop: 5
         
         xhrSetup: function(xhr) {
           xhr.withCredentials = false;
-          // Timeout otimizado para mobile
-          xhr.timeout = forceConservativeMode ? 8000 : (mobileOptimizations ? 20000 : 30000); // Mobile: 20s, Desktop: 30s
+          // Timeout otimizado para iOS
+          xhr.timeout = forceConservativeMode ? 8000 : (iosOptimizations ? 15000 : (mobileOptimizations ? 20000 : 30000)); // iOS: 15s, Mobile: 20s, Desktop: 30s
         }
       });
 
@@ -195,12 +207,15 @@ const LivePlayer = () => {
         }
       });
       
-      // Configuração otimizada para mobile (baseado em melhores práticas)
+      // Configuração otimizada para iOS (baseado em melhores práticas)
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         if (forceConservativeMode) {
           console.log('🔧 Mobile + Conexão Lenta: Forçando qualidade mínima');
           hls.currentLevel = 0; // Força qualidade mínima
           hls.startLevel = 0; // Garante que comece baixo
+        } else if (iosOptimizations) {
+          console.log('🍎 iOS: Começando baixo mas pode subir (otimizado para iOS)');
+          hls.startLevel = 0; // iOS começa baixo mas pode subir
         } else if (mobileOptimizations) {
           console.log('📱 Mobile: Começando baixo mas pode subir (otimizado)');
           hls.startLevel = 0; // Mobile começa baixo mas pode subir
@@ -253,8 +268,18 @@ const LivePlayer = () => {
       console.log('🍎 Usando suporte nativo HLS (Safari/iOS)');
       console.log('📱 Mobile:', isMobile);
       
-      // Configurar atributos para melhor performance em mobile
-      if (isMobile) {
+      // Configurar atributos específicos para iOS
+      if (isIOS) {
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.preload = 'none'; // iOS: none para economizar recursos
+        video.setAttribute('x-webkit-airplay', 'allow');
+        video.setAttribute('x5-video-player-type', 'h5');
+        video.setAttribute('x5-video-player-fullscreen', 'true');
+        video.setAttribute('x5-video-orientation', 'portraint');
+        video.setAttribute('controls', 'true');
+        video.setAttribute('muted', 'false');
+      } else if (isMobile) {
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
         video.preload = 'metadata'; // Mobile: metadata, Desktop: auto
