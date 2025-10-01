@@ -53,8 +53,15 @@ const LivePlayer = () => {
     console.log('📱 Mobile:', isMobile);
     console.log('📶 Velocidade:', speed);
 
-    // Função para verificar se o vídeo está travado
+    // Função para verificar se o vídeo está travado (DESABILITADA para mobile)
     const startWatchdog = () => {
+      // Mobile: SEM watchdog automático - usuário resolve manualmente
+      if (isMobile) {
+        console.log('🐕 Watchdog DESABILITADO para mobile - usuário resolve manualmente');
+        return;
+      }
+      
+      // Desktop: mantém watchdog
       let lastTime = 0;
       let stallCount = 0;
       
@@ -117,6 +124,7 @@ const LivePlayer = () => {
       console.log('🖥️ Forçar Desktop Mobile WiFi:', forceDesktopForMobileWifi);
       console.log('🐕 Desabilitar Watchdog:', disableWatchdog);
       console.log('📱 Otimizações Mobile:', mobileOptimizations);
+      console.log('🔄 Recuperação Automática:', isMobile ? 'DESABILITADA (usuário resolve)' : 'ATIVA');
       console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : (useDesktopMode ? 'Desktop-like' : 'Mobile Normal'));
       console.log('🔧 Forçar conservador:', forceConservativeMode);
       
@@ -240,10 +248,18 @@ const LivePlayer = () => {
         }
       });
 
-      // Tratamento de erros ULTRA agressivo para mobile
+      // Tratamento de erros - Mobile SEM recuperação automática
       hls.on(Hls.Events.ERROR, (event, data) => {
         console.error('❌ HLS Error:', data.type, data.details);
         
+        // Mobile: SEM recuperação automática - usuário resolve manualmente
+        if (isMobile) {
+          console.log('📱 Mobile: SEM recuperação automática - usuário resolve manualmente');
+          setError('Erro na transmissão. Recarregue a página (F5).');
+          return;
+        }
+        
+        // Desktop: mantém recuperação automática
         if (data.fatal) {
           recoveryAttempts.current++;
           
@@ -261,7 +277,6 @@ const LivePlayer = () => {
                     hls.currentLevel = 0;
                     hls.startLevel = 0;
                   }
-                  // Mobile WiFi: NÃO força qualidade baixa (igual ao PC)
                   hls.startLoad();
                 }, retryDelay);
               } else {
@@ -277,7 +292,6 @@ const LivePlayer = () => {
                 if (forceConservativeMode) {
                   hls.currentLevel = 0;
                 }
-                // Mobile WiFi: NÃO força qualidade baixa (igual ao PC)
                 hls.recoverMediaError();
               } else {
                 setError('Erro na transmissão. Recarregue a página.');
@@ -340,9 +354,18 @@ const LivePlayer = () => {
       
       video.src = streamUrl;
       
-      // Listener para erros de rede
+      // Listener para erros de rede - Mobile SEM retry automático
       video.addEventListener('error', (e) => {
         console.error('❌ Safari: erro de vídeo', e);
+        
+        // Mobile: SEM retry automático - usuário resolve manualmente
+        if (isMobile) {
+          console.log('📱 Mobile Safari: SEM retry automático - usuário resolve manualmente');
+          setError('Erro de vídeo. Recarregue a página (F5).');
+          return;
+        }
+        
+        // Desktop: mantém retry automático
         if (video.error) {
           console.error('Código do erro:', video.error.code);
           // Tentar recarregar
@@ -375,9 +398,18 @@ const LivePlayer = () => {
           });
       });
       
-      // Listener para stalling em Safari
+      // Listener para stalling em Safari - Mobile SEM recuperação automática
       video.addEventListener('stalled', () => {
         console.warn('⚠️ Safari: stream travado');
+        
+        // Mobile: SEM recuperação automática - usuário resolve manualmente
+        if (isMobile) {
+          console.log('📱 Mobile Safari: SEM recuperação automática - usuário resolve manualmente');
+          setError('Stream travado. Recarregue a página (F5).');
+          return;
+        }
+        
+        // Desktop: mantém comportamento normal
         setIsLoading(true);
       });
       
