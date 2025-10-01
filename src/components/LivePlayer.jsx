@@ -106,6 +106,9 @@ const LivePlayer = () => {
       // Desabilitar watchdog para mobile WiFi (igual PC)
       const disableWatchdog = forceDesktopForMobileWifi;
       
+      // Configurações específicas para mobile (baseadas em melhores práticas)
+      const mobileOptimizations = isMobile;
+      
       console.log('📱 Mobile:', isMobile);
       console.log('📶 Velocidade:', speed);
       console.log('🐌 Conexão lenta:', isSlowConnection);
@@ -113,6 +116,7 @@ const LivePlayer = () => {
       console.log('💻 Modo Desktop-like:', useDesktopMode);
       console.log('🖥️ Forçar Desktop Mobile WiFi:', forceDesktopForMobileWifi);
       console.log('🐕 Desabilitar Watchdog:', disableWatchdog);
+      console.log('📱 Otimizações Mobile:', mobileOptimizations);
       console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : (useDesktopMode ? 'Desktop-like' : 'Mobile Normal'));
       console.log('🔧 Forçar conservador:', forceConservativeMode);
       
@@ -122,46 +126,46 @@ const LivePlayer = () => {
         lowLatencyMode: false,
         debug: false,
         
-        // Buffer EXATAMENTE igual ao desktop para mobile WiFi
-        maxBufferLength: forceConservativeMode ? 10 : 30, // SEMPRE 30s se não for conexão lenta
-        maxMaxBufferLength: forceConservativeMode ? 20 : 60, // SEMPRE 60s se não for conexão lenta
-        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : 60 * 1000 * 1000, // SEMPRE 60MB se não for conexão lenta
-        maxBufferHole: forceConservativeMode ? 0.1 : 0.5,
-        backBufferLength: forceConservativeMode ? 5 : 20, // SEMPRE 20s se não for conexão lenta
+        // Buffer otimizado para mobile (baseado em melhores práticas)
+        maxBufferLength: forceConservativeMode ? 10 : (mobileOptimizations ? 15 : 30), // Mobile: 15s, Desktop: 30s
+        maxMaxBufferLength: forceConservativeMode ? 20 : (mobileOptimizations ? 30 : 60), // Mobile: 30s, Desktop: 60s
+        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : (mobileOptimizations ? 30 * 1000 * 1000 : 60 * 1000 * 1000), // Mobile: 30MB, Desktop: 60MB
+        maxBufferHole: forceConservativeMode ? 0.1 : (mobileOptimizations ? 0.3 : 0.5), // Mobile: mais tolerante
+        backBufferLength: forceConservativeMode ? 5 : (mobileOptimizations ? 10 : 20), // Mobile: 10s, Desktop: 20s
         
-        // ABR EXATAMENTE igual ao desktop para mobile WiFi
-        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : 5000000, // SEMPRE 5Mbps se não for conexão lenta
-        abrBandWidthFactor: forceConservativeMode ? 0.6 : 0.95, // SEMPRE 0.95 se não for conexão lenta
-        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : 0.7, // SEMPRE 0.7 se não for conexão lenta
+        // ABR otimizado para mobile (baseado em melhores práticas)
+        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : (mobileOptimizations ? 1000000 : 5000000), // Mobile: 1Mbps, Desktop: 5Mbps
+        abrBandWidthFactor: forceConservativeMode ? 0.6 : (mobileOptimizations ? 0.8 : 0.95), // Mobile: mais conservador
+        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : (mobileOptimizations ? 0.5 : 0.7), // Mobile: sobe devagar
         abrMaxWithRealBitrate: true,
-        abrEwmaFastLive: forceConservativeMode ? 1.5 : 3.0, // SEMPRE 3.0 se não for conexão lenta
-        abrEwmaSlowLive: forceConservativeMode ? 3.0 : 9.0, // SEMPRE 9.0 se não for conexão lenta
+        abrEwmaFastLive: forceConservativeMode ? 1.5 : (mobileOptimizations ? 2.0 : 3.0), // Mobile: reage mais rápido
+        abrEwmaSlowLive: forceConservativeMode ? 3.0 : (mobileOptimizations ? 5.0 : 9.0), // Mobile: adapta mais devagar
         
-        // Recuperação EXATAMENTE igual ao desktop para mobile WiFi
+        // Recuperação otimizada para mobile (baseado em melhores práticas)
         capLevelToPlayerSize: true,
         capLevelOnFPSDrop: forceConservativeMode,
-        nudgeMaxRetry: forceConservativeMode ? 20 : 10, // SEMPRE 10 se não for conexão lenta
-        manifestLoadingTimeOut: forceConservativeMode ? 10000 : 30000, // SEMPRE 30s se não for conexão lenta
-        manifestLoadingMaxRetry: forceConservativeMode ? 15 : 8, // SEMPRE 8 se não for conexão lenta
-        levelLoadingTimeOut: forceConservativeMode ? 10000 : 30000, // SEMPRE 30s se não for conexão lenta
-        levelLoadingMaxRetry: forceConservativeMode ? 15 : 8, // SEMPRE 8 se não for conexão lenta
-        fragLoadingTimeOut: forceConservativeMode ? 10000 : 30000, // SEMPRE 30s se não for conexão lenta
-        fragLoadingMaxRetry: forceConservativeMode ? 15 : 8, // SEMPRE 8 se não for conexão lenta
+        nudgeMaxRetry: forceConservativeMode ? 20 : (mobileOptimizations ? 15 : 10), // Mobile: 15x, Desktop: 10x
+        manifestLoadingTimeOut: forceConservativeMode ? 10000 : (mobileOptimizations ? 20000 : 30000), // Mobile: 20s, Desktop: 30s
+        manifestLoadingMaxRetry: forceConservativeMode ? 15 : (mobileOptimizations ? 10 : 8), // Mobile: 10x, Desktop: 8x
+        levelLoadingTimeOut: forceConservativeMode ? 10000 : (mobileOptimizations ? 20000 : 30000), // Mobile: 20s, Desktop: 30s
+        levelLoadingMaxRetry: forceConservativeMode ? 15 : (mobileOptimizations ? 10 : 8), // Mobile: 10x, Desktop: 8x
+        fragLoadingTimeOut: forceConservativeMode ? 10000 : (mobileOptimizations ? 20000 : 30000), // Mobile: 20s, Desktop: 30s
+        fragLoadingMaxRetry: forceConservativeMode ? 15 : (mobileOptimizations ? 10 : 8), // Mobile: 10x, Desktop: 8x
         
-        // Otimizações EXATAMENTE iguais ao desktop
-        highBufferWatchdogPeriod: forceConservativeMode ? 1 : (disableWatchdog ? 5 : 2), // Menos agressivo para mobile WiFi
-        startLevel: forceConservativeMode ? 0 : -1, // SEMPRE automático se não for conexão lenta
+        // Otimizações específicas para mobile (baseado em melhores práticas)
+        highBufferWatchdogPeriod: forceConservativeMode ? 1 : (mobileOptimizations ? 3 : 2), // Mobile: 3s, Desktop: 2s
+        startLevel: forceConservativeMode ? 0 : (mobileOptimizations ? 0 : -1), // Mobile: começa baixo, Desktop: automático
         testBandwidth: true,
         progressive: true,
         
-        // Configurações EXATAMENTE iguais ao desktop
-        liveSyncDurationCount: forceConservativeMode ? 1 : 3, // SEMPRE 3 se não for conexão lenta
-        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : 5, // SEMPRE 5 se não for conexão lenta
+        // Configurações específicas para mobile
+        liveSyncDurationCount: forceConservativeMode ? 1 : (mobileOptimizations ? 2 : 3), // Mobile: 2, Desktop: 3
+        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : (mobileOptimizations ? 3 : 5), // Mobile: 3, Desktop: 5
         
         xhrSetup: function(xhr) {
           xhr.withCredentials = false;
-          // Timeout EXATAMENTE igual ao desktop
-          xhr.timeout = forceConservativeMode ? 8000 : 30000; // SEMPRE 30s se não for conexão lenta
+          // Timeout otimizado para mobile
+          xhr.timeout = forceConservativeMode ? 8000 : (mobileOptimizations ? 20000 : 30000); // Mobile: 20s, Desktop: 30s
         }
       });
 
@@ -221,15 +225,18 @@ const LivePlayer = () => {
         }
       });
       
-      // Configuração EXATAMENTE igual ao desktop para mobile WiFi
+      // Configuração otimizada para mobile (baseado em melhores práticas)
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         if (forceConservativeMode) {
           console.log('🔧 Mobile + Conexão Lenta: Forçando qualidade mínima');
           hls.currentLevel = 0; // Força qualidade mínima
           hls.startLevel = 0; // Garante que comece baixo
+        } else if (mobileOptimizations) {
+          console.log('📱 Mobile: Começando baixo mas pode subir (otimizado)');
+          hls.startLevel = 0; // Mobile começa baixo mas pode subir
         } else {
-          console.log('💻 Desktop/Mobile WiFi: Qualidade automática (IGUAL AO PC)');
-          hls.startLevel = -1; // SEMPRE automático se não for conexão lenta
+          console.log('💻 Desktop: Qualidade automática');
+          hls.startLevel = -1; // Desktop automático
         }
       });
 
@@ -324,7 +331,11 @@ const LivePlayer = () => {
       if (isMobile) {
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
-        video.preload = 'auto'; // Preload em mobile Safari
+        video.preload = 'metadata'; // Mobile: metadata, Desktop: auto
+        video.setAttribute('x-webkit-airplay', 'allow');
+        video.setAttribute('x5-video-player-type', 'h5');
+        video.setAttribute('x5-video-player-fullscreen', 'true');
+        video.setAttribute('x5-video-orientation', 'portraint');
       }
       
       video.src = streamUrl;
@@ -453,8 +464,10 @@ const LivePlayer = () => {
             className="w-full h-full object-contain"
             controls
             playsInline
+            webkit-playsinline="true"
             muted={false}
             autoPlay
+            preload="metadata"
             style={{ minHeight: '200px' }}
           />
           
