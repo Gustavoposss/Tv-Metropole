@@ -231,7 +231,7 @@ const LivePlayer = () => {
         
         // Sistema de recuperação automática TOTALMENTE removido
         console.log('🔄 Recuperação automática DESABILITADA - usuário resolve manualmente');
-        setError('Erro na transmissão. Recarregue a página (F5).');
+        // setError removido - usuário resolve manualmente
       });
 
       // Reset contador de tentativas quando conseguir carregar
@@ -297,7 +297,7 @@ const LivePlayer = () => {
         
         // Sistema de retry automático TOTALMENTE removido
         console.log('🔄 Retry automático DESABILITADO - usuário resolve manualmente');
-        setError('Erro de vídeo. Recarregue a página (F5).');
+        // setError removido - usuário resolve manualmente
       });
       
       video.addEventListener('loadedmetadata', () => {
@@ -322,7 +322,7 @@ const LivePlayer = () => {
         
         // Sistema de recuperação automática TOTALMENTE removido
         console.log('🔄 Recuperação automática DESABILITADA - usuário resolve manualmente');
-        setError('Stream travado. Recarregue a página (F5).');
+        // setError removido - usuário resolve manualmente
       });
       
       video.addEventListener('waiting', () => {
@@ -416,7 +416,7 @@ const LivePlayer = () => {
           />
           
           {/* Indicador de qualidade e conexão - Responsivo */}
-          {!isLoading && !error && connectionSpeed !== 'checking' && (
+          {!isLoading && connectionSpeed !== 'checking' && (
             <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-black bg-opacity-80 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs z-20 pointer-events-none">
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-white">
                 {/* Qualidade */}
@@ -440,7 +440,7 @@ const LivePlayer = () => {
           )}
           
           {/* Loading overlay */}
-          {isLoading && !error && (
+          {isLoading && (
             <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10 pointer-events-none">
               <div className="text-white text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
@@ -457,24 +457,7 @@ const LivePlayer = () => {
             </div>
           )}
           
-          {/* Error overlay */}
-          {error && (
-            <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center z-10">
-              <div className="text-white text-center p-6">
-                <div className="text-4xl mb-4">⚠️</div>
-                <p className="text-lg font-medium text-red-300 mb-2">{error}</p>
-                <p className="text-sm text-gray-300 mb-4">
-                  Tente recarregar a página ou verifique sua conexão
-                </p>
-                <button 
-                  onClick={() => window.location.reload()} 
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
-                >
-                  Recarregar Página
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Error overlay - REMOVIDO a pedido do usuário */}
         </div>
       </div>
     </div>
