@@ -56,17 +56,28 @@ const LivePlayer = () => {
     // Função para verificar se o vídeo está travado
     const startWatchdog = () => {
       let lastTime = 0;
+      let stallCount = 0;
       
       watchdogTimer.current = setInterval(() => {
         if (!video.paused && !video.ended) {
           const currentTime = video.currentTime;
           
-          // Se o tempo não mudou em 5 segundos, o vídeo está travado
+          // Se o tempo não mudou, incrementa contador
           if (currentTime === lastTime) {
-            console.warn('⚠️ Vídeo travado! Tentando recuperar...');
-            if (hlsRef.current) {
-              hlsRef.current.recoverMediaError();
+            stallCount++;
+            console.log(`⏳ Stall count: ${stallCount}`);
+            
+            // Só tenta recuperar se travar por 15 segundos (3 verificações de 5s)
+            if (stallCount >= 3) {
+              console.warn('⚠️ Vídeo travado por 15s! Tentando recuperar...');
+              if (hlsRef.current) {
+                hlsRef.current.recoverMediaError();
+              }
+              stallCount = 0; // Reset contador
             }
+          } else {
+            // Se tempo mudou, reset contador
+            stallCount = 0;
           }
           
           lastTime = currentTime;
@@ -92,12 +103,16 @@ const LivePlayer = () => {
       // FORÇAR modo desktop para mobile WiFi (igual PC)
       const forceDesktopForMobileWifi = isMobile && isWifi;
       
+      // Desabilitar watchdog para mobile WiFi (igual PC)
+      const disableWatchdog = forceDesktopForMobileWifi;
+      
       console.log('📱 Mobile:', isMobile);
       console.log('📶 Velocidade:', speed);
       console.log('🐌 Conexão lenta:', isSlowConnection);
       console.log('📶 WiFi:', isWifi);
       console.log('💻 Modo Desktop-like:', useDesktopMode);
       console.log('🖥️ Forçar Desktop Mobile WiFi:', forceDesktopForMobileWifi);
+      console.log('🐕 Desabilitar Watchdog:', disableWatchdog);
       console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : (useDesktopMode ? 'Desktop-like' : 'Mobile Normal'));
       console.log('🔧 Forçar conservador:', forceConservativeMode);
       
@@ -134,7 +149,7 @@ const LivePlayer = () => {
         fragLoadingMaxRetry: forceConservativeMode ? 15 : 8, // SEMPRE 8 se não for conexão lenta
         
         // Otimizações EXATAMENTE iguais ao desktop
-        highBufferWatchdogPeriod: forceConservativeMode ? 1 : 2,
+        highBufferWatchdogPeriod: forceConservativeMode ? 1 : (disableWatchdog ? 5 : 2), // Menos agressivo para mobile WiFi
         startLevel: forceConservativeMode ? 0 : -1, // SEMPRE automático se não for conexão lenta
         testBandwidth: true,
         progressive: true,
@@ -169,7 +184,13 @@ const LivePlayer = () => {
               console.log('✅ Reprodução iniciada automaticamente');
               setIsLoading(false);
               setError(null);
-              startWatchdog(); // Iniciar watchdog
+              // Só inicia watchdog se não for mobile WiFi
+              if (!disableWatchdog) {
+                startWatchdog(); // Iniciar watchdog
+                console.log('🐕 Watchdog iniciado');
+              } else {
+                console.log('🐕 Watchdog desabilitado (Mobile WiFi = Desktop)');
+              }
             })
             .catch((err) => {
               console.warn('⚠️ Autoplay bloqueado:', err.message);
@@ -329,7 +350,13 @@ const LivePlayer = () => {
             console.log('✅ Safari: reprodução iniciada');
             setIsLoading(false);
             setError(null);
-            startWatchdog();
+            // Só inicia watchdog se não for mobile WiFi
+            if (!disableWatchdog) {
+              startWatchdog();
+              console.log('🐕 Watchdog iniciado (Safari)');
+            } else {
+              console.log('🐕 Watchdog desabilitado (Safari Mobile WiFi = Desktop)');
+            }
           })
           .catch((err) => {
             console.warn('⚠️ Safari: autoplay bloqueado -', err.message);
