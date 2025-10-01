@@ -103,6 +103,10 @@ const LivePlayer = () => {
       console.log('🐕 Watchdog: TOTALMENTE DESABILITADO');
       console.log('📱 Otimizações Mobile:', mobileOptimizations);
       console.log('🍎 Otimizações iOS:', iosOptimizations);
+      console.log('🍎 iOS Buffer: 6s (ultra conservador)');
+      console.log('🍎 iOS ABR: 500kbps (muito conservador)');
+      console.log('🍎 iOS Timeout: 10s (mais tolerante)');
+      console.log('🍎 iOS Retry: 25x (máxima tentativa)');
       console.log('🔄 Recuperação Automática: TOTALMENTE DESABILITADA (usuário resolve)');
       console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : (useDesktopMode ? 'Desktop-like' : 'Mobile Normal'));
       console.log('🔧 Forçar conservador:', forceConservativeMode);
@@ -113,12 +117,12 @@ const LivePlayer = () => {
         lowLatencyMode: false,
         debug: false,
         
-        // Buffer otimizado para iOS (baseado em melhores práticas)
-        maxBufferLength: forceConservativeMode ? 10 : (iosOptimizations ? 8 : (mobileOptimizations ? 15 : 30)), // iOS: 8s, Mobile: 15s, Desktop: 30s
-        maxMaxBufferLength: forceConservativeMode ? 20 : (iosOptimizations ? 15 : (mobileOptimizations ? 30 : 60)), // iOS: 15s, Mobile: 30s, Desktop: 60s
-        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : (iosOptimizations ? 15 * 1000 * 1000 : (mobileOptimizations ? 30 * 1000 * 1000 : 60 * 1000 * 1000)), // iOS: 15MB, Mobile: 30MB, Desktop: 60MB
-        maxBufferHole: forceConservativeMode ? 0.1 : (iosOptimizations ? 0.2 : (mobileOptimizations ? 0.3 : 0.5)), // iOS: mais tolerante
-        backBufferLength: forceConservativeMode ? 5 : (iosOptimizations ? 5 : (mobileOptimizations ? 10 : 20)), // iOS: 5s, Mobile: 10s, Desktop: 20s
+        // Buffer otimizado para iOS (baseado em melhores práticas 2024)
+        maxBufferLength: forceConservativeMode ? 10 : (iosOptimizations ? 6 : (mobileOptimizations ? 15 : 30)), // iOS: 6s (ultra conservador), Mobile: 15s, Desktop: 30s
+        maxMaxBufferLength: forceConservativeMode ? 20 : (iosOptimizations ? 12 : (mobileOptimizations ? 30 : 60)), // iOS: 12s, Mobile: 30s, Desktop: 60s
+        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : (iosOptimizations ? 10 * 1000 * 1000 : (mobileOptimizations ? 30 * 1000 * 1000 : 60 * 1000 * 1000)), // iOS: 10MB, Mobile: 30MB, Desktop: 60MB
+        maxBufferHole: forceConservativeMode ? 0.1 : (iosOptimizations ? 0.15 : (mobileOptimizations ? 0.3 : 0.5)), // iOS: mais tolerante
+        backBufferLength: forceConservativeMode ? 5 : (iosOptimizations ? 3 : (mobileOptimizations ? 10 : 20)), // iOS: 3s, Mobile: 10s, Desktop: 20s
         
         // ABR otimizado para iOS (baseado em melhores práticas)
         abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : (iosOptimizations ? 500000 : (mobileOptimizations ? 1000000 : 5000000)), // iOS: 500kbps, Mobile: 1Mbps, Desktop: 5Mbps
@@ -128,16 +132,16 @@ const LivePlayer = () => {
         abrEwmaFastLive: forceConservativeMode ? 1.5 : (iosOptimizations ? 1.8 : (mobileOptimizations ? 2.0 : 3.0)), // iOS: reage mais rápido
         abrEwmaSlowLive: forceConservativeMode ? 3.0 : (iosOptimizations ? 4.0 : (mobileOptimizations ? 5.0 : 9.0)), // iOS: adapta mais devagar
         
-        // Recuperação otimizada para iOS (baseado em melhores práticas)
+        // Recuperação otimizada para iOS (baseado em melhores práticas 2024)
         capLevelToPlayerSize: true,
         capLevelOnFPSDrop: forceConservativeMode,
-        nudgeMaxRetry: forceConservativeMode ? 20 : (iosOptimizations ? 20 : (mobileOptimizations ? 15 : 10)), // iOS: 20x, Mobile: 15x, Desktop: 10x
-        manifestLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 15000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 15s, Mobile: 20s, Desktop: 30s
-        manifestLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 12 : (mobileOptimizations ? 10 : 8)), // iOS: 12x, Mobile: 10x, Desktop: 8x
-        levelLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 15000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 15s, Mobile: 20s, Desktop: 30s
-        levelLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 12 : (mobileOptimizations ? 10 : 8)), // iOS: 12x, Mobile: 10x, Desktop: 8x
-        fragLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 15000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 15s, Mobile: 20s, Desktop: 30s
-        fragLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 12 : (mobileOptimizations ? 10 : 8)), // iOS: 12x, Mobile: 10x, Desktop: 8x
+        nudgeMaxRetry: forceConservativeMode ? 20 : (iosOptimizations ? 25 : (mobileOptimizations ? 15 : 10)), // iOS: 25x, Mobile: 15x, Desktop: 10x
+        manifestLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 12000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 12s, Mobile: 20s, Desktop: 30s
+        manifestLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 15 : (mobileOptimizations ? 10 : 8)), // iOS: 15x, Mobile: 10x, Desktop: 8x
+        levelLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 12000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 12s, Mobile: 20s, Desktop: 30s
+        levelLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 15 : (mobileOptimizations ? 10 : 8)), // iOS: 15x, Mobile: 10x, Desktop: 8x
+        fragLoadingTimeOut: forceConservativeMode ? 10000 : (iosOptimizations ? 12000 : (mobileOptimizations ? 20000 : 30000)), // iOS: 12s, Mobile: 20s, Desktop: 30s
+        fragLoadingMaxRetry: forceConservativeMode ? 15 : (iosOptimizations ? 15 : (mobileOptimizations ? 10 : 8)), // iOS: 15x, Mobile: 10x, Desktop: 8x
         
         // Otimizações específicas para iOS (baseado em melhores práticas)
         highBufferWatchdogPeriod: forceConservativeMode ? 1 : (iosOptimizations ? 4 : (mobileOptimizations ? 3 : 2)), // iOS: 4s, Mobile: 3s, Desktop: 2s
@@ -151,8 +155,8 @@ const LivePlayer = () => {
         
         xhrSetup: function(xhr) {
           xhr.withCredentials = false;
-          // Timeout otimizado para iOS
-          xhr.timeout = forceConservativeMode ? 8000 : (iosOptimizations ? 15000 : (mobileOptimizations ? 20000 : 30000)); // iOS: 15s, Mobile: 20s, Desktop: 30s
+          // Timeout otimizado para iOS (baseado em melhores práticas 2024)
+          xhr.timeout = forceConservativeMode ? 8000 : (iosOptimizations ? 10000 : (mobileOptimizations ? 20000 : 30000)); // iOS: 10s, Mobile: 20s, Desktop: 30s
         }
       });
 
@@ -268,7 +272,7 @@ const LivePlayer = () => {
       console.log('🍎 Usando suporte nativo HLS (Safari/iOS)');
       console.log('📱 Mobile:', isMobile);
       
-      // Configurar atributos específicos para iOS
+      // Configurar atributos específicos para iOS (baseado em melhores práticas 2024)
       if (isIOS) {
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
@@ -279,6 +283,15 @@ const LivePlayer = () => {
         video.setAttribute('x5-video-orientation', 'portraint');
         video.setAttribute('controls', 'true');
         video.setAttribute('muted', 'false');
+        video.setAttribute('autoplay', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('playsinline', 'true');
+        // iOS: configurações específicas para estabilidade
+        video.setAttribute('crossorigin', 'anonymous');
+        video.setAttribute('allowfullscreen', 'true');
+        video.setAttribute('webkitallowfullscreen', 'true');
+        video.setAttribute('mozallowfullscreen', 'true');
+        video.setAttribute('msallowfullscreen', 'true');
       } else if (isMobile) {
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
@@ -411,7 +424,12 @@ const LivePlayer = () => {
             webkit-playsinline="true"
             muted={false}
             autoPlay
-            preload="metadata"
+            preload={isIOS ? "none" : "metadata"}
+            crossOrigin="anonymous"
+            allowFullScreen
+            webkitAllowFullScreen
+            mozAllowFullScreen
+            msAllowFullScreen
             style={{ minHeight: '200px' }}
           />
           
