@@ -64,25 +64,25 @@ const Programacao = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Cabeçalho da página */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
-          <h1 className="text-4xl md:text-5xl font-bold text-green-800 mb-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-green-800 mb-3 sm:mb-4 px-2">
             Programação da TV Metrópole
           </h1>
-          <p className="text-lg text-green-700 mb-6">
+          <p className="text-sm sm:text-base md:text-lg text-green-700 mb-4 sm:mb-6 px-4">
             Confira os horários dos seus programas favoritos.
           </p>
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto border border-green-200">
-            <h2 className="text-2xl font-bold text-green-800 mb-2">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 max-w-2xl mx-auto border border-green-200">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-green-800 mb-2">
               {formatDate(currentTime)}
             </h2>
-            <p className="text-green-700">
+            <p className="text-sm sm:text-base text-green-700">
               Horário atual: {currentTime.toLocaleTimeString('pt-BR', { 
                 hour: '2-digit', 
                 minute: '2-digit' 
@@ -96,27 +96,28 @@ const Programacao = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="space-y-6"
+          className="space-y-4 sm:space-y-6"
         >
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-              <p className="text-green-700 text-lg">Carregando programação...</p>
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+              <p className="text-green-700 text-base sm:text-lg">Carregando programação...</p>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-              <div className="text-4xl mb-4">⚠️</div>
-              <p className="text-red-700 text-lg mb-2">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center mx-2 sm:mx-0">
+              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">⚠️</div>
+              <p className="text-red-700 text-base sm:text-lg mb-2">{error}</p>
               <button 
                 onClick={() => window.location.reload()} 
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors mt-4"
+                className="bg-green-600 hover:bg-green-700 text-white px-5 sm:px-6 py-2 rounded-lg transition-colors mt-3 sm:mt-4 text-sm sm:text-base"
               >
                 Recarregar
               </button>
             </div>
           ) : programas.length === 0 ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-              <p className="text-yellow-700 text-lg">Nenhum programa encontrado para hoje.</p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 sm:p-6 text-center mx-2 sm:mx-0">
+              <div className="text-3xl sm:text-4xl mb-3">📺</div>
+              <p className="text-yellow-700 text-base sm:text-lg">Nenhum programa encontrado para hoje.</p>
             </div>
           ) : (
             programas.map((programa, index) => (
@@ -136,21 +137,23 @@ const Programacao = () => {
         </motion.div>
 
         {/* Informações adicionais */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-12 bg-white rounded-xl shadow-lg p-8 text-center"
-        >
-          <h3 className="text-2xl font-bold text-gray-800 mb-4">
-            Sobre a Programação
-          </h3>
-          <p className="text-gray-600 max-w-3xl mx-auto">
-            Nossa programação é atualizada diariamente para trazer o melhor conteúdo 
-            para você. Todos os programas são transmitidos ao vivo com qualidade HD, 
-            garantindo uma experiência única de entretenimento e informação.
-          </p>
-        </motion.div>
+        {!loading && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="mt-8 sm:mt-12 bg-white rounded-xl shadow-lg p-6 sm:p-8 text-center"
+          >
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">
+              Sobre a Programação
+            </h3>
+            <p className="text-sm sm:text-base text-gray-600 max-w-3xl mx-auto">
+              Nossa programação é atualizada diariamente para trazer o melhor conteúdo 
+              para você. Todos os programas são transmitidos ao vivo com qualidade adaptativa, 
+              garantindo uma experiência única de entretenimento e informação.
+            </p>
+          </motion.div>
+        )}
       </div>
     </div>
   );
