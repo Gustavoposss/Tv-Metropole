@@ -11,9 +11,6 @@ const LivePlayer = () => {
   const recoveryAttempts = useRef(0);
   const watchdogTimer = useRef(null);
 
-  // Detectar se é iOS (iPhone/iPad) - disponível em todo o componente
-  const isIOS = isIOSDevice();
-
   // Detectar se é dispositivo mobile
   const isMobileDevice = () => {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -23,6 +20,9 @@ const LivePlayer = () => {
   const isIOSDevice = () => {
     return /iPhone|iPad|iPod/i.test(navigator.userAgent);
   };
+
+  // Detectar se é iOS (iPhone/iPad) - disponível em todo o componente
+  const isIOS = isIOSDevice();
 
   // Detectar velocidade de conexão
   const detectConnectionSpeed = () => {
