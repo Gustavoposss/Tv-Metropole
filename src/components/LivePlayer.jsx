@@ -6,6 +6,8 @@ const LivePlayer = () => {
   const hlsRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const recoveryAttempts = useRef(0);
+  const watchdogTimer = useRef(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -13,16 +15,49 @@ const LivePlayer = () => {
 
     const streamUrl = 'https://cdn-fundacao-2110.ciclano.io:1443/fundacao-2110/fundacao-2110/playlist.m3u8';
 
-    // Verificar se HLS é suportado
+    // Função para verificar se o vídeo está travado
+    const startWatchdog = () => {
+      let lastTime = 0;
+      
+      watchdogTimer.current = setInterval(() => {
+        if (!video.paused && !video.ended) {
+          const currentTime = video.currentTime;
+          
+          // Se o tempo não mudou em 5 segundos, o vídeo está travado
+          if (currentTime === lastTime) {
+            console.warn('⚠️ Vídeo travado! Tentando recuperar...');
+            if (hlsRef.current) {
+              hlsRef.current.recoverMediaError();
+            }
+          }
+          
+          lastTime = currentTime;
+        }
+      }, 5000); // Verifica a cada 5 segundos
+    };
+
+    // Configurar HLS
     if (Hls.isSupported()) {
-      console.log('HLS.js é suportado');
+      console.log('🎬 Iniciando HLS.js...');
+      
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
         backBufferLength: 90,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 60 * 1000 * 1000,
+        maxBufferHole: 0.5,
+        highBufferWatchdogPeriod: 2,
+        nudgeMaxRetry: 10,
+        manifestLoadingTimeOut: 20000,
+        manifestLoadingMaxRetry: 6,
+        levelLoadingTimeOut: 20000,
+        levelLoadingMaxRetry: 6,
+        fragLoadingTimeOut: 30000,
+        fragLoadingMaxRetry: 6,
         debug: false,
         xhrSetup: function(xhr) {
-          // Configurar headers se necessário
           xhr.withCredentials = false;
         }
       });
@@ -32,99 +67,126 @@ const LivePlayer = () => {
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
 
+      // Quando o manifesto é carregado
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('Manifesto carregado');
-        video.play()
-          .then(() => {
-            console.log('Reprodução iniciada');
-            setIsLoading(false);
-          })
-          .catch((err) => {
-            console.error('Erro ao iniciar reprodução:', err);
-            setError('Clique no player para iniciar a transmissão');
-            setIsLoading(false);
-          });
+        console.log('✅ Manifesto carregado');
+        
+        // Tentar reproduzir automaticamente
+        const playPromise = video.play();
+        
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('✅ Reprodução iniciada automaticamente');
+              setIsLoading(false);
+              setError(null);
+              startWatchdog(); // Iniciar watchdog
+            })
+            .catch((err) => {
+              console.warn('⚠️ Autoplay bloqueado:', err.message);
+              setError(null); // Não mostrar como erro
+              setIsLoading(false);
+            });
+        }
       });
 
+      // Tratamento de erros
       hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error('HLS Error:', data);
+        console.error('❌ HLS Error:', data.type, data.details);
         
         if (data.fatal) {
+          recoveryAttempts.current++;
+          
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.log('Erro de rede fatal, tentando recuperar...');
-              hls.startLoad();
+              console.log(`🔄 Erro de rede (tentativa ${recoveryAttempts.current})...`);
+              
+              if (recoveryAttempts.current < 10) {
+                setTimeout(() => {
+                  console.log('🔄 Tentando recarregar...');
+                  hls.startLoad();
+                }, 1000);
+              } else {
+                setError('Erro de conexão. Verifique sua internet.');
+              }
               break;
+              
             case Hls.ErrorTypes.MEDIA_ERROR:
-              console.log('Erro de mídia fatal, tentando recuperar...');
-              hls.recoverMediaError();
+              console.log(`🔄 Erro de mídia (tentativa ${recoveryAttempts.current})...`);
+              
+              if (recoveryAttempts.current < 10) {
+                hls.recoverMediaError();
+              } else {
+                setError('Erro na transmissão. Recarregue a página.');
+              }
               break;
+              
             default:
-              console.log('Erro fatal irrecuperável');
+              console.log('❌ Erro irrecuperável');
               setError('Erro ao carregar a transmissão');
-              setIsLoading(false);
               hls.destroy();
               break;
           }
         }
       });
 
+      // Reset contador de tentativas quando conseguir carregar
+      hls.on(Hls.Events.FRAG_LOADED, () => {
+        recoveryAttempts.current = 0;
+      });
+
       // Event listeners do vídeo
-      video.addEventListener('loadstart', () => {
-        console.log('Carregando...');
+      video.addEventListener('waiting', () => {
+        console.log('⏳ Buffering...');
+        setIsLoading(true);
       });
 
       video.addEventListener('canplay', () => {
-        console.log('Pronto para reproduzir');
+        console.log('✅ Pronto para reproduzir');
         setIsLoading(false);
       });
 
       video.addEventListener('playing', () => {
-        console.log('Reproduzindo...');
+        console.log('▶️ Reproduzindo...');
         setIsLoading(false);
       });
 
-      video.addEventListener('error', () => {
-        console.error('Erro no vídeo');
-        setError('Erro ao carregar o vídeo');
-        setIsLoading(false);
+      video.addEventListener('stalled', () => {
+        console.warn('⚠️ Stream travado, tentando recuperar...');
+        if (hlsRef.current) {
+          hlsRef.current.recoverMediaError();
+        }
       });
 
     } 
-    // Fallback para Safari (suporte nativo a HLS)
+    // Fallback Safari
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      console.log('Usando suporte nativo a HLS (Safari)');
+      console.log('🍎 Usando suporte nativo HLS (Safari)');
       video.src = streamUrl;
       
       video.addEventListener('loadedmetadata', () => {
-        console.log('Metadata carregada');
         video.play()
           .then(() => {
-            console.log('Reprodução iniciada (Safari)');
+            console.log('✅ Safari: reprodução iniciada');
             setIsLoading(false);
+            startWatchdog();
           })
           .catch((err) => {
-            console.error('Erro ao iniciar reprodução (Safari):', err);
-            setError('Clique no player para iniciar a transmissão');
+            console.warn('⚠️ Safari: autoplay bloqueado');
             setIsLoading(false);
           });
       });
-
-      video.addEventListener('error', () => {
-        console.error('Erro no vídeo (Safari)');
-        setError('Erro ao carregar o vídeo');
-        setIsLoading(false);
-      });
     } 
-    // HLS não suportado
     else {
-      console.error('HLS não é suportado neste navegador');
-      setError('Seu navegador não suporta streaming HLS');
+      setError('Navegador não suporta HLS');
       setIsLoading(false);
     }
 
     // Cleanup
     return () => {
+      if (watchdogTimer.current) {
+        clearInterval(watchdogTimer.current);
+      }
       if (hlsRef.current) {
         hlsRef.current.destroy();
       }
