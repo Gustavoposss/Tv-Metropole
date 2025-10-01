@@ -27,8 +27,8 @@ const LivePlayer = () => {
         return effectiveType;
       }
     }
-    // Se não detectar, assume 3g em mobile
-    const fallback = isMobileDevice() ? '3g' : '4g';
+    // Se não detectar, assume 4g (não 3g!)
+    const fallback = '4g';
     setConnectionSpeed(fallback);
     return fallback;
   };
@@ -73,12 +73,15 @@ const LivePlayer = () => {
       
       // Configurações adaptativas baseadas na conexão e dispositivo
       const isSlowConnection = speed === '2g' || speed === 'slow-2g' || speed === '3g';
-      const isMobileOrSlow = isMobile || isSlowConnection;
+      const isMobileOrSlow = isMobile && isSlowConnection; // SÓ mobile + conexão lenta
       
-      // FORÇAR modo conservador se for mobile (mesmo com WiFi)
-      const forceConservativeMode = isMobile;
+      // Modo conservador APENAS se mobile E conexão lenta
+      const forceConservativeMode = isMobileOrSlow;
       
-      console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile Conservador' : 'Desktop');
+      console.log('📱 Mobile:', isMobile);
+      console.log('📶 Velocidade:', speed);
+      console.log('🐌 Conexão lenta:', isSlowConnection);
+      console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : 'Normal');
       console.log('🔧 Forçar conservador:', forceConservativeMode);
       
       const hls = new Hls({
@@ -87,46 +90,46 @@ const LivePlayer = () => {
         lowLatencyMode: false,
         debug: false,
         
-        // Buffer ULTRA REDUZIDO para mobile - inicia MUITO mais rápido
-        maxBufferLength: forceConservativeMode ? 10 : 30, // ULTRA REDUZIDO: 10s mobile!
-        maxMaxBufferLength: forceConservativeMode ? 20 : 60, // ULTRA REDUZIDO
-        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : 60 * 1000 * 1000, // 20MB mobile
-        maxBufferHole: 0.1, // MUITO tolerante a "buracos"
-        backBufferLength: forceConservativeMode ? 5 : 20, // Mínimo em mobile
+        // Buffer inteligente baseado na conexão
+        maxBufferLength: forceConservativeMode ? 10 : (isMobile ? 20 : 30), // 10s só se mobile+lento
+        maxMaxBufferLength: forceConservativeMode ? 20 : (isMobile ? 40 : 60),
+        maxBufferSize: forceConservativeMode ? 20 * 1000 * 1000 : (isMobile ? 30 * 1000 * 1000 : 60 * 1000 * 1000),
+        maxBufferHole: forceConservativeMode ? 0.1 : 0.5,
+        backBufferLength: forceConservativeMode ? 5 : (isMobile ? 10 : 20),
         
-        // ABR ULTRA conservador para mobile
-        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : 5000000, // 200kbps mobile!
-        abrBandWidthFactor: forceConservativeMode ? 0.6 : 0.95, // MUITO conservador
-        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : 0.7, // Sobe MUITO devagar
+        // ABR inteligente
+        abrEwmaDefaultEstimate: forceConservativeMode ? 200000 : (isMobile ? 500000 : 5000000),
+        abrBandWidthFactor: forceConservativeMode ? 0.6 : (isMobile ? 0.8 : 0.95),
+        abrBandWidthUpFactor: forceConservativeMode ? 0.3 : (isMobile ? 0.5 : 0.7),
         abrMaxWithRealBitrate: true,
-        abrEwmaFastLive: forceConservativeMode ? 1.5 : 3.0, // Reage MUITO rápido
-        abrEwmaSlowLive: forceConservativeMode ? 3.0 : 9.0, // Adapta MUITO devagar
+        abrEwmaFastLive: forceConservativeMode ? 1.5 : (isMobile ? 2.0 : 3.0),
+        abrEwmaSlowLive: forceConservativeMode ? 3.0 : (isMobile ? 4.0 : 9.0),
         
-        // Recuperação ULTRA agressiva para mobile
+        // Recuperação inteligente
         capLevelToPlayerSize: true,
-        capLevelOnFPSDrop: forceConservativeMode, // Drop de FPS força qualidade menor
-        nudgeMaxRetry: forceConservativeMode ? 20 : 15, // AINDA mais tentativas
-        manifestLoadingTimeOut: forceConservativeMode ? 10000 : 20000, // ULTRA REDUZIDO
-        manifestLoadingMaxRetry: forceConservativeMode ? 15 : 10,
-        levelLoadingTimeOut: forceConservativeMode ? 10000 : 20000, // ULTRA REDUZIDO
-        levelLoadingMaxRetry: forceConservativeMode ? 15 : 10,
-        fragLoadingTimeOut: forceConservativeMode ? 10000 : 20000, // ULTRA REDUZIDO
-        fragLoadingMaxRetry: forceConservativeMode ? 15 : 10,
+        capLevelOnFPSDrop: forceConservativeMode,
+        nudgeMaxRetry: forceConservativeMode ? 20 : (isMobile ? 15 : 10),
+        manifestLoadingTimeOut: forceConservativeMode ? 10000 : (isMobile ? 20000 : 30000),
+        manifestLoadingMaxRetry: forceConservativeMode ? 15 : (isMobile ? 10 : 8),
+        levelLoadingTimeOut: forceConservativeMode ? 10000 : (isMobile ? 20000 : 30000),
+        levelLoadingMaxRetry: forceConservativeMode ? 15 : (isMobile ? 10 : 8),
+        fragLoadingTimeOut: forceConservativeMode ? 10000 : (isMobile ? 20000 : 30000),
+        fragLoadingMaxRetry: forceConservativeMode ? 15 : (isMobile ? 10 : 8),
         
-        // Otimizações ULTRA mobile
-        highBufferWatchdogPeriod: forceConservativeMode ? 1 : 2, // Verifica mais frequentemente
-        startLevel: forceConservativeMode ? 0 : -1, // SEMPRE qualidade mínima
+        // Otimizações inteligentes
+        highBufferWatchdogPeriod: forceConservativeMode ? 1 : 2,
+        startLevel: forceConservativeMode ? 0 : (isMobile ? 0 : -1), // Mobile começa baixo, desktop automático
         testBandwidth: true,
         progressive: true,
         
-        // Configurações extras para mobile
-        liveSyncDurationCount: forceConservativeMode ? 1 : 3, // Menos fragmentos em live
-        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : 5, // Menor latência
+        // Configurações extras
+        liveSyncDurationCount: forceConservativeMode ? 1 : (isMobile ? 2 : 3),
+        liveMaxLatencyDurationCount: forceConservativeMode ? 2 : (isMobile ? 3 : 5),
         
         xhrSetup: function(xhr) {
           xhr.withCredentials = false;
-          // Timeout ULTRA curto em mobile
-          xhr.timeout = forceConservativeMode ? 8000 : 30000; // 8s mobile!
+          // Timeout inteligente
+          xhr.timeout = forceConservativeMode ? 8000 : (isMobile ? 15000 : 30000);
         }
       });
 
@@ -167,9 +170,9 @@ const LivePlayer = () => {
           setCurrentQuality(quality);
           console.log('📊 Qualidade alterada para:', quality);
           
-          // FORÇAR qualidade baixa em mobile se subir muito
+          // FORÇAR qualidade baixa APENAS se mobile + conexão lenta
           if (forceConservativeMode && level.height > 480) {
-            console.log('⚠️ Mobile: Forçando qualidade menor (era', quality, ')');
+            console.log('⚠️ Mobile + Conexão Lenta: Forçando qualidade menor (era', quality, ')');
             setTimeout(() => {
               hls.currentLevel = 0; // Força qualidade mínima
             }, 1000);
@@ -177,12 +180,15 @@ const LivePlayer = () => {
         }
       });
       
-      // FORÇAR qualidade baixa em mobile após carregar
+      // FORÇAR qualidade baixa APENAS se mobile + conexão lenta
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         if (forceConservativeMode) {
-          console.log('🔧 Mobile: Forçando qualidade mínima');
+          console.log('🔧 Mobile + Conexão Lenta: Forçando qualidade mínima');
           hls.currentLevel = 0; // Força qualidade mínima
           hls.startLevel = 0; // Garante que comece baixo
+        } else if (isMobile) {
+          console.log('📱 Mobile + WiFi Bom: Começando com qualidade baixa (não forçada)');
+          hls.startLevel = 0; // Mobile começa baixo mas pode subir
         }
       });
 
