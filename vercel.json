@@ -8,6 +8,10 @@
     {
       "source": "/api/rss",
       "destination": "/api/rss"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
