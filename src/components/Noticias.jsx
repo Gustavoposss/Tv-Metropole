@@ -23,8 +23,13 @@ const Noticias = () => {
         setIsLoading(true);
         setError(null);
         
-        // Usar servidor proxy com CORS liberado
-        const response = await fetch('http://localhost:3001/api/rss', {
+        // Detectar se está em produção ou desenvolvimento
+        const isProduction = window.location.hostname !== 'localhost';
+        const apiUrl = isProduction 
+          ? '/api/rss'  // API route da Vercel em produção
+          : 'http://localhost:3001/api/rss';  // Servidor proxy local em desenvolvimento
+        
+        const response = await fetch(apiUrl, {
           headers: {
             'Accept': 'application/rss+xml, application/xml, text/xml',
             'User-Agent': 'Mozilla/5.0 (compatible; RSS Reader)'
