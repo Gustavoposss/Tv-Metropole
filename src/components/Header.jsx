@@ -40,7 +40,7 @@ const Header = () => {
             >
               <span className="flex items-center space-x-1">
                 <span className="text-xs sm:text-sm"></span>
-                <span className="text-xs sm:text-sm">Live</span>
+                <span className="text-xs sm:text-sm">Ao Vivo</span>
               </span>
             </Link>
             
@@ -54,7 +54,7 @@ const Header = () => {
             >
               <span className="flex items-center space-x-1">
                 <span className="text-xs sm:text-sm"></span>
-                <span className="text-xs sm:text-sm">Prog</span>
+                <span className="text-xs sm:text-sm">Programação</span>
               </span>
             </Link>
             
