@@ -58,20 +58,16 @@ const LivePlayer = () => {
     const speed = detectConnectionSpeed();
     const isMobile = isMobileDevice();
     
-    console.log('📱 Mobile:', isMobile);
-    console.log('🍎 iOS:', isIOS);
-    console.log('📶 Velocidade:', speed);
+    // Detecção de dispositivo e conexão
 
     // Função para verificar se o vídeo está travado (TOTALMENTE DESABILITADA)
     const startWatchdog = () => {
-      console.log('🐕 Watchdog TOTALMENTE DESABILITADO - usuário resolve manualmente');
       // Sistema de watchdog completamente removido
       // Usuário resolve manualmente com F5
     };
 
     // Configurar HLS - Otimizado para mobile e conexões lentas
     if (Hls.isSupported()) {
-      console.log('🎬 Iniciando HLS.js...');
       
       // Configurações adaptativas baseadas na conexão e dispositivo
       const isSlowConnection = speed === '2g' || speed === 'slow-2g' || speed === '3g';
@@ -95,23 +91,7 @@ const LivePlayer = () => {
       // Configurações específicas para iOS (iPhone/iPad)
       const iosOptimizations = isIOS;
       
-      console.log('📱 Mobile:', isMobile);
-      console.log('🍎 iOS:', isIOS);
-      console.log('📶 Velocidade:', speed);
-      console.log('🐌 Conexão lenta:', isSlowConnection);
-      console.log('📶 WiFi:', isWifi);
-      console.log('💻 Modo Desktop-like:', useDesktopMode);
-      console.log('🖥️ Forçar Desktop Mobile WiFi:', forceDesktopForMobileWifi);
-      console.log('🐕 Watchdog: TOTALMENTE DESABILITADO');
-      console.log('📱 Otimizações Mobile:', mobileOptimizations);
-      console.log('🍎 Otimizações iOS:', iosOptimizations);
-      console.log('🍎 iOS Buffer: 6s (ultra conservador)');
-      console.log('🍎 iOS ABR: 500kbps (muito conservador)');
-      console.log('🍎 iOS Timeout: 10s (mais tolerante)');
-      console.log('🍎 iOS Retry: 25x (máxima tentativa)');
-      console.log('🔄 Recuperação Automática: TOTALMENTE DESABILITADA (usuário resolve)');
-      console.log('⚙️ Modo:', forceConservativeMode ? 'Mobile + Conexão Lenta' : (useDesktopMode ? 'Desktop-like' : 'Mobile Normal'));
-      console.log('🔧 Forçar conservador:', forceConservativeMode);
+      // Configurações aplicadas automaticamente
       
       const hls = new Hls({
         // Configurações gerais
@@ -169,23 +149,16 @@ const LivePlayer = () => {
 
       // Quando o manifesto é carregado
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-        console.log('✅ Manifesto carregado');
-        console.log('📊 Níveis disponíveis:', data.levels.length);
-        
         // Tentar reproduzir automaticamente
         const playPromise = video.play();
         
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-              console.log('✅ Reprodução iniciada automaticamente');
               setIsLoading(false);
               setError(null);
-              // Sistema de watchdog TOTALMENTE removido
-              console.log('🐕 Watchdog TOTALMENTE DESABILITADO - usuário resolve manualmente');
             })
             .catch((err) => {
-              console.warn('⚠️ Autoplay bloqueado:', err.message);
               setError(null); // Não mostrar como erro
               setIsLoading(false);
             });
@@ -198,17 +171,12 @@ const LivePlayer = () => {
         if (level) {
           const quality = `${level.height}p`;
           setCurrentQuality(quality);
-          console.log('📊 Qualidade alterada para:', quality);
           
           // FORÇAR qualidade baixa APENAS se mobile + conexão lenta (NÃO WiFi)
           if (forceConservativeMode && level.height > 480) {
-            console.log('⚠️ Mobile + Conexão Lenta: Forçando qualidade menor (era', quality, ')');
             setTimeout(() => {
               hls.currentLevel = 0; // Força qualidade mínima
             }, 1000);
-          } else if (forceDesktopForMobileWifi) {
-            console.log('📱 Mobile WiFi: Permitindo qualquer qualidade (igual ao PC)');
-            // NÃO força qualidade baixa - deixa igual ao PC
           }
         }
       });
@@ -216,27 +184,20 @@ const LivePlayer = () => {
       // Configuração otimizada para iOS (baseado em melhores práticas)
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         if (forceConservativeMode) {
-          console.log('🔧 Mobile + Conexão Lenta: Forçando qualidade mínima');
           hls.currentLevel = 0; // Força qualidade mínima
           hls.startLevel = 0; // Garante que comece baixo
         } else if (iosOptimizations) {
-          console.log('🍎 iOS: Começando baixo mas pode subir (otimizado para iOS)');
           hls.startLevel = 0; // iOS começa baixo mas pode subir
         } else if (mobileOptimizations) {
-          console.log('📱 Mobile: Começando baixo mas pode subir (otimizado)');
           hls.startLevel = 0; // Mobile começa baixo mas pode subir
         } else {
-          console.log('💻 Desktop: Qualidade automática');
           hls.startLevel = -1; // Desktop automático
         }
       });
 
       // Tratamento de erros - SEM recuperação automática (TOTALMENTE DESABILITADA)
       hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error('❌ HLS Error:', data.type, data.details);
-        
         // Sistema de recuperação automática TOTALMENTE removido
-        console.log('🔄 Recuperação automática DESABILITADA - usuário resolve manualmente');
         // setError removido - usuário resolve manualmente
       });
 
@@ -247,17 +208,17 @@ const LivePlayer = () => {
 
       // Event listeners do vídeo
       video.addEventListener('waiting', () => {
-        console.log('⏳ Buffering...');
+        // Buffering
         setIsLoading(true);
       });
 
       video.addEventListener('canplay', () => {
-        console.log('✅ Pronto para reproduzir');
+        // Pronto para reproduzir
         setIsLoading(false);
       });
 
       video.addEventListener('playing', () => {
-        console.log('▶️ Reproduzindo...');
+        // Reproduzindo
         setIsLoading(false);
       });
 
@@ -271,8 +232,7 @@ const LivePlayer = () => {
     } 
     // Fallback Safari/iOS - HLS Nativo
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      console.log('🍎 Usando suporte nativo HLS (Safari/iOS)');
-      console.log('📱 Mobile:', isMobile);
+      // Usando suporte nativo HLS (Safari/iOS)
       
       // Configurar atributos específicos para iOS (baseado em melhores práticas 2024)
       if (isIOS) {
@@ -311,19 +271,19 @@ const LivePlayer = () => {
         console.error('❌ Safari: erro de vídeo', e);
         
         // Sistema de retry automático TOTALMENTE removido
-        console.log('🔄 Retry automático DESABILITADO - usuário resolve manualmente');
+        // Retry automático DESABILITADO
         // setError removido - usuário resolve manualmente
       });
       
       video.addEventListener('loadedmetadata', () => {
-        console.log('✅ Safari: metadata carregada');
+        // Safari: metadata carregada
         video.play()
           .then(() => {
-            console.log('✅ Safari: reprodução iniciada');
+            // Safari: reprodução iniciada
             setIsLoading(false);
             setError(null);
             // Sistema de watchdog TOTALMENTE removido
-            console.log('🐕 Watchdog TOTALMENTE DESABILITADO (Safari) - usuário resolve manualmente');
+            // Watchdog DESABILITADO
           })
           .catch((err) => {
             console.warn('⚠️ Safari: autoplay bloqueado -', err.message);
@@ -336,22 +296,22 @@ const LivePlayer = () => {
         console.warn('⚠️ Safari: stream travado');
         
         // Sistema de recuperação automática TOTALMENTE removido
-        console.log('🔄 Recuperação automática DESABILITADA - usuário resolve manualmente');
+        // Recuperação automática DESABILITADA
         // setError removido - usuário resolve manualmente
       });
       
       video.addEventListener('waiting', () => {
-        console.log('⏳ Safari: buffering...');
+        // Safari: buffering
         setIsLoading(true);
       });
       
       video.addEventListener('playing', () => {
-        console.log('▶️ Safari: reproduzindo');
+        // Safari: reproduzindo
         setIsLoading(false);
       });
       
       video.addEventListener('canplay', () => {
-        console.log('✅ Safari: pode reproduzir');
+        // Safari: pode reproduzir
         setIsLoading(false);
       });
     } 
@@ -363,7 +323,7 @@ const LivePlayer = () => {
     // Monitorar mudanças de conexão em tempo real
     const handleConnectionChange = () => {
       detectConnectionSpeed();
-      console.log('🔄 Velocidade de conexão mudou');
+      // Velocidade de conexão mudou
     };
 
     if ('connection' in navigator) {
@@ -429,9 +389,9 @@ const LivePlayer = () => {
             preload={isIOS ? "none" : "metadata"}
             crossOrigin="anonymous"
             allowFullScreen
-            webkitAllowFullScreen
-            mozAllowFullScreen
-            msAllowFullScreen
+        webkitallowfullscreen="true"
+        mozallowfullscreen="true"
+        msallowfullscreen="true"
             style={{ minHeight: '200px' }}
           />
           

@@ -14,13 +14,13 @@ export const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey,
 // Função para buscar programas do dia atual
 export const getProgramas = async () => {
   try {
-    console.log('🔍 Buscando programas do Supabase...');
+    // Buscando programas do Supabase
     
     // Pegar data de hoje
     const hoje = new Date();
     const diaSemana = hoje.toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
     
-    console.log('📅 Dia da semana:', diaSemana);
+    // Dia da semana detectado
     
     const { data, error } = await supabase
       .from('Programação')
@@ -59,10 +59,7 @@ export const getProgramas = async () => {
       return contemHoje;
     });
 
-    console.log('✅ Programas filtrados:', programasHoje?.length || 0, 'programas para', diaSemana);
-    if (programasHoje.length > 0) {
-      console.log('📋 Exemplo de programa:', programasHoje[0].titulo, '- Dias:', programasHoje[0].dias_semana);
-    }
+    // Programas filtrados
     
     return programasHoje || [];
   } catch (error) {

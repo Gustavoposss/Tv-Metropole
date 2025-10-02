@@ -39,7 +39,7 @@ const Header = () => {
               }`}
             >
               <span className="flex items-center space-x-1 sm:space-x-2">
-                <span className="text-sm sm:text-base md:text-lg">📡</span>
+                <span className="text-sm sm:text-base md:text-lg"></span>
                 <span className="hidden sm:inline">Ao Vivo</span>
                 <span className="sm:hidden">Live</span>
               </span>
@@ -54,7 +54,22 @@ const Header = () => {
               }`}
             >
               <span className="hidden sm:inline">Programação</span>
-              <span className="sm:hidden">📅</span>
+              <span className="sm:hidden"></span>
+            </Link>
+            
+            <Link
+              to="/noticias"
+              className={`px-2 py-1.5 sm:px-3 sm:py-2 md:px-4 md:py-2 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm md:text-base ${
+                location.pathname === '/noticias'
+                  ? 'bg-green-600 text-white shadow-lg'
+                  : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
+              }`}
+            >
+              <span className="flex items-center space-x-1 sm:space-x-2">
+                <span className="text-sm sm:text-base md:text-lg"></span>
+                <span className="hidden sm:inline">Notícias</span>
+                <span className="sm:hidden">News</span>
+              </span>
             </Link>
           </nav>
         </div>

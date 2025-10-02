@@ -5,6 +5,7 @@ import Header from './components/Header';
 // Lazy loading das páginas
 const Home = lazy(() => import('./pages/Home'));
 const Programacao = lazy(() => import('./pages/Programacao'));
+const NoticiasPage = lazy(() => import('./pages/NoticiasPage'));
 
 // Componente de loading
 const PageLoader = () => (
@@ -26,6 +27,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/programacao" element={<Programacao />} />
+              <Route path="/noticias" element={<NoticiasPage />} />
             </Routes>
           </Suspense>
         </main>
