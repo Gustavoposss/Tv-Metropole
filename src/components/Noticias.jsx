@@ -18,52 +18,21 @@ const Noticias = () => {
   };
 
   useEffect(() => {
-    const fetchNoticias = async () => {
+    const fetchNoticias = async (retryCount = 0) => {
       try {
         setIsLoading(true);
         setError(null);
         
-        // Usar múltiplos proxies como fallback (atualizados)
-        const proxies = [
-          'https://corsproxy.io/?',
-          'https://api.codetabs.com/v1/proxy?quest=',
-          'https://thingproxy.freeboard.io/fetch/',
-          'https://cors.bridged.cc/',
-          'https://proxy.cors.sh/'
-        ];
-        
-        const RSS_URL = 'https://g1.globo.com/dynamo/rss2.xml';
-        let response;
-        let lastError;
-        
-        // Tentar cada proxy até um funcionar
-        for (let i = 0; i < proxies.length; i++) {
-          const proxy = proxies[i];
-          try {
-            if (proxy.includes('allorigins')) {
-              response = await fetch(proxy + encodeURIComponent(RSS_URL), {
-                signal: AbortSignal.timeout(5000) // 5 segundos timeout
-              });
-            } else {
-              response = await fetch(proxy + RSS_URL, {
-                headers: {
-                  'X-Requested-With': 'XMLHttpRequest'
-                },
-                signal: AbortSignal.timeout(5000) // 5 segundos timeout
-              });
-            }
-            
-            if (response.ok) {
-              break;
-            }
-          } catch (err) {
-            lastError = err;
-            continue;
+        // Usar servidor proxy com CORS liberado
+        const response = await fetch('http://localhost:3001/api/rss', {
+          headers: {
+            'Accept': 'application/rss+xml, application/xml, text/xml',
+            'User-Agent': 'Mozilla/5.0 (compatible; RSS Reader)'
           }
-        }
+        });
         
-        if (!response || !response.ok) {
-          throw new Error('Todos os proxies CORS falharam');
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar RSS: ${response.status} ${response.statusText}`);
         }
         const xmlText = await response.text();
         
@@ -91,6 +60,16 @@ const Noticias = () => {
         setNoticias(noticiasLimitadas);
       } catch (err) {
         console.error('Erro ao buscar notícias:', err);
+        
+        // Retry automático até 3 tentativas
+        if (retryCount < 3) {
+          console.log(`🔄 Tentativa ${retryCount + 1}/3 - Tentando novamente em 2 segundos...`);
+          setTimeout(() => {
+            fetchNoticias(retryCount + 1);
+          }, 2000);
+          return;
+        }
+        
         setError(`Erro ao carregar notícias: ${err.message}. Verifique sua conexão e tente novamente.`);
       } finally {
         setIsLoading(false);

@@ -33,5 +33,5 @@ export default defineConfig({
   // Otimizar dependências
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'hls.js'],
-  },
+  }
 })
