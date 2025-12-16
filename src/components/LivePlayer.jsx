@@ -70,8 +70,10 @@ const LivePlayer = () => {
       // Usuário resolve manualmente com F5
     };
 
+    // IMPORTANTE: iOS Safari tem suporte nativo HLS e é mais eficiente em memória
+    // Sempre usar player nativo no iOS, não HLS.js
     // Configurar HLS - Otimizado para mobile e conexões lentas
-    if (Hls.isSupported()) {
+    if (Hls.isSupported() && !isIOS) {
       
       // Configurações adaptativas baseadas na conexão e dispositivo
       const isSlowConnection = speed === '2g' || speed === 'slow-2g' || speed === '3g';
@@ -238,19 +240,15 @@ const LivePlayer = () => {
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Usando suporte nativo HLS (Safari/iOS)
       
-      // Função de recuperação para iOS quando o vídeo trava
+      // Função de recuperação simplificada para iOS (reduz uso de memória)
       const recoverIOSStream = () => {
-        if (retryCount.current >= 3) {
-          console.warn('⚠️ iOS: Máximo de tentativas de recuperação atingido');
+        if (retryCount.current >= 2) {
+          // Limite reduzido para economizar memória
           retryCount.current = 0;
           return;
         }
         
         retryCount.current++;
-        console.log(`🔄 iOS: Tentativa de recuperação ${retryCount.current}/3`);
-        
-        const currentTime = video.currentTime;
-        const wasPlaying = !video.paused;
         
         // Limpar timer anterior se existir
         if (stalledTimer.current) {
@@ -258,38 +256,33 @@ const LivePlayer = () => {
           stalledTimer.current = null;
         }
         
-        // Tentar recarregar o source
+        // Recarregar source de forma simples
+        const wasPlaying = !video.paused;
         video.load();
         
-        // Tentar retomar reprodução após carregar
-        video.addEventListener('loadeddata', () => {
-          if (wasPlaying) {
-            video.currentTime = currentTime;
-            video.play().catch(err => {
-              console.warn('⚠️ iOS: Erro ao retomar reprodução após recuperação', err);
-            });
-          }
-        }, { once: true });
+        if (wasPlaying) {
+          video.play().catch(() => {
+            // Silenciar erro para reduzir overhead
+          });
+        }
       };
       
-      // Configurar atributos específicos para iOS (otimizado para streaming ao vivo)
+      // Configurar atributos específicos para iOS (otimizado para reduzir uso de memória)
       if (isIOS) {
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
-        // iOS: metadata é melhor que 'none' para streaming ao vivo (permite buffer inicial)
-        video.preload = 'metadata';
+        // iOS: 'none' economiza memória - o Safari gerencia o buffer automaticamente
+        video.preload = 'none';
         video.setAttribute('x-webkit-airplay', 'allow');
         video.setAttribute('controls', 'true');
         video.setAttribute('muted', 'false');
         video.setAttribute('autoplay', 'true');
-        // iOS: configurações específicas para estabilidade
+        // iOS: configurações mínimas para reduzir overhead
         video.setAttribute('crossorigin', 'anonymous');
         video.setAttribute('allowfullscreen', 'true');
         video.setAttribute('webkitallowfullscreen', 'true');
-        video.setAttribute('mozallowfullscreen', 'true');
-        video.setAttribute('msallowfullscreen', 'true');
         
-        // Configurações específicas do iOS para melhor performance
+        // Configurações específicas do iOS para melhor performance e menos memória
         video.playsInline = true;
         video.webkitPlaysInline = true;
       } else if (isMobile) {
@@ -304,20 +297,19 @@ const LivePlayer = () => {
       
       video.src = streamUrl;
       
-      // Listener para erros de rede com retry inteligente para iOS
+      // Listener para erros de rede simplificado para iOS (reduz memória)
       video.addEventListener('error', (e) => {
-        console.error('❌ Safari: erro de vídeo', e);
-        
         if (isIOS && video.error) {
-          // Erro de rede ou decodificação - tentar recuperar
-          if (video.error.code === MediaError.MEDIA_ERR_NETWORK || 
-              video.error.code === MediaError.MEDIA_ERR_DECODE) {
+          // Erro de rede ou decodificação - tentar recuperar uma vez
+          if ((video.error.code === MediaError.MEDIA_ERR_NETWORK || 
+               video.error.code === MediaError.MEDIA_ERR_DECODE) &&
+              retryCount.current < 1) {
             setTimeout(() => {
               recoverIOSStream();
-            }, 2000);
+            }, 3000);
           }
         }
-      });
+      }, { passive: true });
       
       video.addEventListener('loadedmetadata', () => {
         // Safari: metadata carregada
@@ -328,54 +320,52 @@ const LivePlayer = () => {
             setIsLoading(false);
             setError(null);
           })
-          .catch((err) => {
-            console.warn('⚠️ Safari: autoplay bloqueado -', err.message);
+          .catch(() => {
+            // Silenciar erro para reduzir overhead
             setIsLoading(false);
           });
-      });
+      }, { passive: true });
       
-      // Sistema de recuperação para stalling em iOS
-      video.addEventListener('stalled', () => {
-        console.warn('⚠️ Safari: stream travado (stalled)');
+      // Sistema de recuperação simplificado para stalling em iOS (reduz memória)
+      if (isIOS) {
+        video.addEventListener('stalled', () => {
+          // Limpar timer anterior se existir
+          if (stalledTimer.current) {
+            clearTimeout(stalledTimer.current);
+          }
+          
+          // Aguardar 4 segundos antes de tentar recuperar (aumentado para reduzir overhead)
+          stalledTimer.current = setTimeout(() => {
+            if (video.readyState < 3 && !video.paused) {
+              recoverIOSStream();
+            }
+          }, 4000);
+        }, { passive: true });
         
-        if (isIOS) {
-          const now = Date.now();
-          lastStallTime.current = now;
+        video.addEventListener('waiting', () => {
+          setIsLoading(true);
           
           // Limpar timer anterior se existir
           if (stalledTimer.current) {
             clearTimeout(stalledTimer.current);
           }
           
-          // Aguardar 3 segundos antes de tentar recuperar
-          // Se ainda estiver travado, tentar recuperação
+          // Aguardar 6 segundos de buffering antes de recuperar
           stalledTimer.current = setTimeout(() => {
-            if (video.readyState < 3) { // HAVE_FUTURE_DATA ou menos
-              console.log('🔄 iOS: Stream ainda travado após 3s, tentando recuperar...');
+            if (video.readyState < 3 && !video.paused) {
               recoverIOSStream();
             }
-          }, 3000);
-        }
-      });
-      
-      video.addEventListener('waiting', () => {
-        // Safari: buffering
-        setIsLoading(true);
+          }, 6000);
+        }, { passive: true });
+      } else {
+        video.addEventListener('stalled', () => {
+          setIsLoading(true);
+        }, { passive: true });
         
-        if (isIOS) {
-          // Se ficar muito tempo em waiting, pode ser um travamento
-          if (stalledTimer.current) {
-            clearTimeout(stalledTimer.current);
-          }
-          
-          stalledTimer.current = setTimeout(() => {
-            if (video.readyState < 3 && video.paused === false) {
-              console.log('🔄 iOS: Buffering prolongado, tentando recuperar...');
-              recoverIOSStream();
-            }
-          }, 5000); // 5 segundos de buffering = possível travamento
-        }
-      });
+        video.addEventListener('waiting', () => {
+          setIsLoading(true);
+        }, { passive: true });
+      }
       
       video.addEventListener('playing', () => {
         // Safari: reproduzindo
@@ -391,12 +381,12 @@ const LivePlayer = () => {
         if (isIOS && video.readyState >= 3) {
           retryCount.current = 0;
         }
-      });
+      }, { passive: true });
       
       video.addEventListener('canplay', () => {
         // Safari: pode reproduzir
         setIsLoading(false);
-      });
+      }, { passive: true });
       
       video.addEventListener('canplaythrough', () => {
         // Safari: buffer suficiente para reprodução contínua
@@ -405,32 +395,10 @@ const LivePlayer = () => {
           clearTimeout(stalledTimer.current);
           stalledTimer.current = null;
         }
-      });
+      }, { passive: true });
       
-      // Monitorar progresso para detectar travamentos silenciosos no iOS
-      if (isIOS) {
-        let lastProgressTime = Date.now();
-        let lastCurrentTime = video.currentTime;
-        
-        progressCheckInterval.current = setInterval(() => {
-          const now = Date.now();
-          const currentTime = video.currentTime;
-          
-          // Se o tempo não avançou por mais de 5 segundos e o vídeo deveria estar reproduzindo
-          if (!video.paused && 
-              Math.abs(currentTime - lastCurrentTime) < 0.1 && 
-              (now - lastProgressTime) > 5000 &&
-              video.readyState < 3) {
-            console.log('🔄 iOS: Detecção de travamento silencioso, tentando recuperar...');
-            recoverIOSStream();
-            lastProgressTime = now;
-          } else if (Math.abs(currentTime - lastCurrentTime) > 0.1) {
-            // Vídeo está avançando normalmente
-            lastProgressTime = now;
-            lastCurrentTime = currentTime;
-          }
-        }, 2000);
-      }
+      // REMOVIDO: Monitoramento de progresso para reduzir uso de memória no iOS
+      // O Safari iOS gerencia isso nativamente de forma mais eficiente
     } 
     else {
       setError('Navegador não suporta HLS');
@@ -448,24 +416,31 @@ const LivePlayer = () => {
       connection?.addEventListener('change', handleConnectionChange);
     }
 
-    // Cleanup
+    // Cleanup agressivo para reduzir uso de memória no iOS
     return () => {
       if (watchdogTimer.current) {
         clearInterval(watchdogTimer.current);
+        watchdogTimer.current = null;
       }
       if (stalledTimer.current) {
         clearTimeout(stalledTimer.current);
+        stalledTimer.current = null;
       }
       if (progressCheckInterval.current) {
         clearInterval(progressCheckInterval.current);
+        progressCheckInterval.current = null;
       }
       if (hlsRef.current) {
         hlsRef.current.destroy();
+        hlsRef.current = null;
       }
       if ('connection' in navigator) {
         const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         connection?.removeEventListener('change', handleConnectionChange);
       }
+      // Limpar referências para ajudar GC no iOS
+      retryCount.current = 0;
+      lastStallTime.current = 0;
     };
   }, []);
 
@@ -509,7 +484,7 @@ const LivePlayer = () => {
             webkit-playsinline="true"
             muted={false}
             autoPlay
-            preload={isIOS ? "metadata" : "metadata"}
+            preload={isIOS ? "none" : "metadata"}
             crossOrigin="anonymous"
             allowFullScreen
             webkitallowfullscreen="true"
