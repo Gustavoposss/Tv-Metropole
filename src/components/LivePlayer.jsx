@@ -10,6 +10,10 @@ const LivePlayer = () => {
   const [currentQuality, setCurrentQuality] = useState('auto');
   const recoveryAttempts = useRef(0);
   const watchdogTimer = useRef(null);
+  const stalledTimer = useRef(null);
+  const lastStallTime = useRef(0);
+  const retryCount = useRef(0);
+  const progressCheckInterval = useRef(null);
 
   // Detectar se é dispositivo mobile
   const isMobileDevice = () => {
@@ -234,26 +238,60 @@ const LivePlayer = () => {
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Usando suporte nativo HLS (Safari/iOS)
       
-      // Configurar atributos específicos para iOS (baseado em melhores práticas 2024)
+      // Função de recuperação para iOS quando o vídeo trava
+      const recoverIOSStream = () => {
+        if (retryCount.current >= 3) {
+          console.warn('⚠️ iOS: Máximo de tentativas de recuperação atingido');
+          retryCount.current = 0;
+          return;
+        }
+        
+        retryCount.current++;
+        console.log(`🔄 iOS: Tentativa de recuperação ${retryCount.current}/3`);
+        
+        const currentTime = video.currentTime;
+        const wasPlaying = !video.paused;
+        
+        // Limpar timer anterior se existir
+        if (stalledTimer.current) {
+          clearTimeout(stalledTimer.current);
+          stalledTimer.current = null;
+        }
+        
+        // Tentar recarregar o source
+        video.load();
+        
+        // Tentar retomar reprodução após carregar
+        video.addEventListener('loadeddata', () => {
+          if (wasPlaying) {
+            video.currentTime = currentTime;
+            video.play().catch(err => {
+              console.warn('⚠️ iOS: Erro ao retomar reprodução após recuperação', err);
+            });
+          }
+        }, { once: true });
+      };
+      
+      // Configurar atributos específicos para iOS (otimizado para streaming ao vivo)
       if (isIOS) {
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
-        video.preload = 'none'; // iOS: none para economizar recursos
+        // iOS: metadata é melhor que 'none' para streaming ao vivo (permite buffer inicial)
+        video.preload = 'metadata';
         video.setAttribute('x-webkit-airplay', 'allow');
-        video.setAttribute('x5-video-player-type', 'h5');
-        video.setAttribute('x5-video-player-fullscreen', 'true');
-        video.setAttribute('x5-video-orientation', 'portraint');
         video.setAttribute('controls', 'true');
         video.setAttribute('muted', 'false');
         video.setAttribute('autoplay', 'true');
-        video.setAttribute('webkit-playsinline', 'true');
-        video.setAttribute('playsinline', 'true');
         // iOS: configurações específicas para estabilidade
         video.setAttribute('crossorigin', 'anonymous');
         video.setAttribute('allowfullscreen', 'true');
         video.setAttribute('webkitallowfullscreen', 'true');
         video.setAttribute('mozallowfullscreen', 'true');
         video.setAttribute('msallowfullscreen', 'true');
+        
+        // Configurações específicas do iOS para melhor performance
+        video.playsInline = true;
+        video.webkitPlaysInline = true;
       } else if (isMobile) {
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
@@ -266,24 +304,29 @@ const LivePlayer = () => {
       
       video.src = streamUrl;
       
-      // Listener para erros de rede - SEM retry automático (TOTALMENTE DESABILITADO)
+      // Listener para erros de rede com retry inteligente para iOS
       video.addEventListener('error', (e) => {
         console.error('❌ Safari: erro de vídeo', e);
         
-        // Sistema de retry automático TOTALMENTE removido
-        // Retry automático DESABILITADO
-        // setError removido - usuário resolve manualmente
+        if (isIOS && video.error) {
+          // Erro de rede ou decodificação - tentar recuperar
+          if (video.error.code === MediaError.MEDIA_ERR_NETWORK || 
+              video.error.code === MediaError.MEDIA_ERR_DECODE) {
+            setTimeout(() => {
+              recoverIOSStream();
+            }, 2000);
+          }
+        }
       });
       
       video.addEventListener('loadedmetadata', () => {
         // Safari: metadata carregada
+        retryCount.current = 0; // Reset contador ao carregar metadata
         video.play()
           .then(() => {
             // Safari: reprodução iniciada
             setIsLoading(false);
             setError(null);
-            // Sistema de watchdog TOTALMENTE removido
-            // Watchdog DESABILITADO
           })
           .catch((err) => {
             console.warn('⚠️ Safari: autoplay bloqueado -', err.message);
@@ -291,29 +334,103 @@ const LivePlayer = () => {
           });
       });
       
-      // Listener para stalling em Safari - SEM recuperação automática (TOTALMENTE DESABILITADA)
+      // Sistema de recuperação para stalling em iOS
       video.addEventListener('stalled', () => {
-        console.warn('⚠️ Safari: stream travado');
+        console.warn('⚠️ Safari: stream travado (stalled)');
         
-        // Sistema de recuperação automática TOTALMENTE removido
-        // Recuperação automática DESABILITADA
-        // setError removido - usuário resolve manualmente
+        if (isIOS) {
+          const now = Date.now();
+          lastStallTime.current = now;
+          
+          // Limpar timer anterior se existir
+          if (stalledTimer.current) {
+            clearTimeout(stalledTimer.current);
+          }
+          
+          // Aguardar 3 segundos antes de tentar recuperar
+          // Se ainda estiver travado, tentar recuperação
+          stalledTimer.current = setTimeout(() => {
+            if (video.readyState < 3) { // HAVE_FUTURE_DATA ou menos
+              console.log('🔄 iOS: Stream ainda travado após 3s, tentando recuperar...');
+              recoverIOSStream();
+            }
+          }, 3000);
+        }
       });
       
       video.addEventListener('waiting', () => {
         // Safari: buffering
         setIsLoading(true);
+        
+        if (isIOS) {
+          // Se ficar muito tempo em waiting, pode ser um travamento
+          if (stalledTimer.current) {
+            clearTimeout(stalledTimer.current);
+          }
+          
+          stalledTimer.current = setTimeout(() => {
+            if (video.readyState < 3 && video.paused === false) {
+              console.log('🔄 iOS: Buffering prolongado, tentando recuperar...');
+              recoverIOSStream();
+            }
+          }, 5000); // 5 segundos de buffering = possível travamento
+        }
       });
       
       video.addEventListener('playing', () => {
         // Safari: reproduzindo
         setIsLoading(false);
+        
+        // Limpar timers quando começar a reproduzir
+        if (stalledTimer.current) {
+          clearTimeout(stalledTimer.current);
+          stalledTimer.current = null;
+        }
+        
+        // Reset contador de retry quando estiver reproduzindo normalmente
+        if (isIOS && video.readyState >= 3) {
+          retryCount.current = 0;
+        }
       });
       
       video.addEventListener('canplay', () => {
         // Safari: pode reproduzir
         setIsLoading(false);
       });
+      
+      video.addEventListener('canplaythrough', () => {
+        // Safari: buffer suficiente para reprodução contínua
+        setIsLoading(false);
+        if (stalledTimer.current) {
+          clearTimeout(stalledTimer.current);
+          stalledTimer.current = null;
+        }
+      });
+      
+      // Monitorar progresso para detectar travamentos silenciosos no iOS
+      if (isIOS) {
+        let lastProgressTime = Date.now();
+        let lastCurrentTime = video.currentTime;
+        
+        progressCheckInterval.current = setInterval(() => {
+          const now = Date.now();
+          const currentTime = video.currentTime;
+          
+          // Se o tempo não avançou por mais de 5 segundos e o vídeo deveria estar reproduzindo
+          if (!video.paused && 
+              Math.abs(currentTime - lastCurrentTime) < 0.1 && 
+              (now - lastProgressTime) > 5000 &&
+              video.readyState < 3) {
+            console.log('🔄 iOS: Detecção de travamento silencioso, tentando recuperar...');
+            recoverIOSStream();
+            lastProgressTime = now;
+          } else if (Math.abs(currentTime - lastCurrentTime) > 0.1) {
+            // Vídeo está avançando normalmente
+            lastProgressTime = now;
+            lastCurrentTime = currentTime;
+          }
+        }, 2000);
+      }
     } 
     else {
       setError('Navegador não suporta HLS');
@@ -335,6 +452,12 @@ const LivePlayer = () => {
     return () => {
       if (watchdogTimer.current) {
         clearInterval(watchdogTimer.current);
+      }
+      if (stalledTimer.current) {
+        clearTimeout(stalledTimer.current);
+      }
+      if (progressCheckInterval.current) {
+        clearInterval(progressCheckInterval.current);
       }
       if (hlsRef.current) {
         hlsRef.current.destroy();
@@ -386,12 +509,12 @@ const LivePlayer = () => {
             webkit-playsinline="true"
             muted={false}
             autoPlay
-            preload={isIOS ? "none" : "metadata"}
+            preload={isIOS ? "metadata" : "metadata"}
             crossOrigin="anonymous"
             allowFullScreen
-        webkitallowfullscreen="true"
-        mozallowfullscreen="true"
-        msallowfullscreen="true"
+            webkitallowfullscreen="true"
+            mozallowfullscreen="true"
+            msallowfullscreen="true"
             style={{ minHeight: '200px' }}
           />
           
