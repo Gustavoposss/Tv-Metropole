@@ -56,13 +56,10 @@ const ProgramaForm = ({ programa, onSubmit, onCancel, enviando }) => {
     if (!form.titulo.trim()) novos.titulo = 'Informe o nome do programa.';
     if (!form.horario_inicio) novos.horario_inicio = 'Informe a hora inicial.';
     if (!form.horario_fim) novos.horario_fim = 'Informe a hora final.';
-    if (
-      form.horario_inicio &&
-      form.horario_fim &&
-      form.horario_fim !== '00:00' &&
-      form.horario_fim <= form.horario_inicio
-    ) {
-      novos.horario_fim = 'A hora final deve ser maior que a inicial.';
+    // Programas podem cruzar a meia-noite (ex.: 22:00 -> 06:00), então só
+    // bloqueia quando início e fim são exatamente iguais (duração zero).
+    if (form.horario_inicio && form.horario_fim && form.horario_fim === form.horario_inicio) {
+      novos.horario_fim = 'A hora final não pode ser igual à inicial.';
     }
     if (!form.dias_semana.length) novos.dias_semana = 'Selecione ao menos um dia.';
     if (!form.tipo) novos.tipo = 'Selecione o tipo.';
