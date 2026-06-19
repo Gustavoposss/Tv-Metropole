@@ -1,11 +1,20 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import Header from './components/Header';
+import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import ProtectedRoute from './components/admin/ProtectedRoute';
 
-// Lazy loading das páginas
+// Lazy loading das páginas públicas
 const Home = lazy(() => import('./pages/Home'));
 const Programacao = lazy(() => import('./pages/Programacao'));
 const NoticiasPage = lazy(() => import('./pages/NoticiasPage'));
+
+// Lazy loading do painel administrativo
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
+const Login = lazy(() => import('./pages/admin/Login'));
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
+const ProgramacaoAdmin = lazy(() => import('./pages/admin/ProgramacaoAdmin'));
 
 // Componente de loading
 const PageLoader = () => (
@@ -17,22 +26,50 @@ const PageLoader = () => (
   </div>
 );
 
+// Layout público (com Header) — preserva as páginas públicas existentes
+const PublicLayout = () => (
+  <div className="min-h-screen bg-gray-50">
+    <Header />
+    <main>
+      <Outlet />
+    </main>
+  </div>
+);
+
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <main>
+    <AuthProvider>
+      <ToastProvider>
+        <Router>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/programacao" element={<Programacao />} />
-              <Route path="/noticias" element={<NoticiasPage />} />
+              {/* Rotas públicas */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/programacao" element={<Programacao />} />
+                <Route path="/noticias" element={<NoticiasPage />} />
+              </Route>
+
+              {/* Login do admin (sem proteção) */}
+              <Route path="/admin/login" element={<Login />} />
+
+              {/* Painel administrativo protegido */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="programacao" element={<ProgramacaoAdmin />} />
+              </Route>
             </Routes>
           </Suspense>
-        </main>
-      </div>
-    </Router>
+        </Router>
+      </ToastProvider>
+    </AuthProvider>
   );
 }
 

@@ -19,6 +19,7 @@
     "framer-motion": "^12.23.22",
     "hls.js": "^1.6.13",
     "node-fetch": "^3.3.2",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-player": "^3.3.3",

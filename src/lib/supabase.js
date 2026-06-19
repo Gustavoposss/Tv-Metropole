@@ -2,12 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import { supabaseConfig } from '../config/supabase.config';
 
 // Criar cliente Supabase
+// persistSession/autoRefreshToken habilitados para suportar o login do painel
+// administrativo (/admin). As leituras públicas continuam usando a anon key.
 export const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey, {
   db: {
     schema: 'public'
   },
   auth: {
-    persistSession: false
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'tv-metropole-auth'
   }
 });
 
