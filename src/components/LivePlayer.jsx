@@ -8,9 +8,11 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
   onEstadoRef.current = onEstado;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [ciclo, setCiclo] = useState(0);
   const [connectionSpeed, setConnectionSpeed] = useState('checking');
   const [currentQuality, setCurrentQuality] = useState('auto');
   const recoveryAttempts = useRef(0);
+  const encerrado = useRef(false);
   const watchdogTimer = useRef(null);
   const stalledTimer = useRef(null);
   const lastStallTime = useRef(0);
@@ -58,7 +60,35 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
     const video = videoRef.current;
     if (!video) return;
 
+    encerrado.current = false;
+    recoveryAttempts.current = 0;
+    retryCount.current = 0;
+    setIsLoading(true);
+    setError(null);
+
     const streamUrl = 'https://cdn-fundacao-2110.ciclano.io:1443/fundacao-2110/fundacao-2110/playlist.m3u8';
+    const limpezas = [];
+    let indisponivel = false;
+    const ouvir = (alvo, evento, fn, opcoes) => {
+      alvo.addEventListener(evento, fn, opcoes);
+      limpezas.push(() => alvo.removeEventListener(evento, fn, opcoes));
+    };
+    const exibirIndisponivel = () => {
+      if (encerrado.current || indisponivel) return;
+      indisponivel = true;
+      setError('indisponivel');
+      setIsLoading(false);
+      try {
+        hlsRef.current?.stopLoad();
+      } catch {
+        // A instância pode já ter sido encerrada.
+      }
+    };
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
     
     // Detectar velocidade de conexão e dispositivo
     const speed = detectConnectionSpeed();
@@ -203,38 +233,87 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
         }
       });
 
-      // Tratamento de erros - SEM recuperação automática (TOTALMENTE DESABILITADA)
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        // Sistema de recuperação automática TOTALMENTE removido
-        // setError removido - usuário resolve manualmente
+      let redeTimer = null;
+      let limiteTimer = null;
+      const sinalVoltou = () => {
+        recoveryAttempts.current = 0;
+        if (redeTimer) {
+          clearTimeout(redeTimer);
+          redeTimer = null;
+        }
+        if (limiteTimer) {
+          clearTimeout(limiteTimer);
+          limiteTimer = null;
+        }
+      };
+      const agendarLimite = () => {
+        if (limiteTimer || indisponivel) return;
+        limiteTimer = setTimeout(() => {
+          limiteTimer = null;
+          if (!encerrado.current && !indisponivel) exibirIndisponivel();
+        }, 8000);
+      };
+      const recuperarRede = () => {
+        if (redeTimer || indisponivel || encerrado.current) return;
+        redeTimer = setTimeout(() => {
+          redeTimer = null;
+          if (encerrado.current || indisponivel || !hlsRef.current) return;
+          hlsRef.current.startLoad();
+        }, 1200);
+      };
+      limpezas.push(() => {
+        if (redeTimer) clearTimeout(redeTimer);
+        if (limiteTimer) clearTimeout(limiteTimer);
       });
 
-      // Reset contador de tentativas quando conseguir carregar
+      // Erro leve de rede reinicia uma vez. Erro fatal de rede ou mídia
+      // tem duas tentativas. Oito segundos sem sinal encerram a espera.
+      hls.on(Hls.Events.ERROR, (_evento, data) => {
+        if (indisponivel) return;
+        const rede = data?.type === Hls.ErrorTypes.NETWORK_ERROR;
+        const midia = data?.type === Hls.ErrorTypes.MEDIA_ERROR;
+        if (!data?.fatal) {
+          if (rede) {
+            agendarLimite();
+            recuperarRede();
+          }
+          return;
+        }
+        if ((rede || midia) && recoveryAttempts.current < 2) {
+          recoveryAttempts.current += 1;
+          setIsLoading(true);
+          agendarLimite();
+          if (rede) hls.startLoad();
+          else hls.recoverMediaError();
+          return;
+        }
+        exibirIndisponivel();
+      });
+
       hls.on(Hls.Events.FRAG_LOADED, () => {
-        recoveryAttempts.current = 0;
+        sinalVoltou();
       });
 
       // Event listeners do vídeo
-      video.addEventListener('waiting', () => {
-        // Buffering
-        setIsLoading(true);
+      ouvir(video, 'waiting', () => {
+        if (!indisponivel) setIsLoading(true);
       });
 
-      video.addEventListener('canplay', () => {
-        // Pronto para reproduzir
+      ouvir(video, 'canplay', () => {
+        if (!indisponivel) setIsLoading(false);
+      });
+
+      ouvir(video, 'playing', () => {
+        if (indisponivel) return;
+        sinalVoltou();
+        setError(null);
         setIsLoading(false);
       });
 
-      video.addEventListener('playing', () => {
-        // Reproduzindo
-        setIsLoading(false);
-      });
-
-      video.addEventListener('stalled', () => {
-        console.warn('⚠️ Stream travado, tentando recuperar...');
-        if (hlsRef.current) {
-          hlsRef.current.recoverMediaError();
-        }
+      ouvir(video, 'stalled', () => {
+        if (indisponivel || !hlsRef.current || recoveryAttempts.current >= 2) return;
+        recoveryAttempts.current += 1;
+        hlsRef.current.recoverMediaError();
       });
 
     } 
@@ -244,9 +323,9 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
       
       // Função de recuperação simplificada para iOS (reduz uso de memória)
       const recoverIOSStream = () => {
+        if (encerrado.current || indisponivel) return;
         if (retryCount.current >= 2) {
-          // Limite reduzido para economizar memória
-          retryCount.current = 0;
+          exibirIndisponivel();
           return;
         }
         
@@ -299,21 +378,21 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
       
       video.src = streamUrl;
       
-      // Listener para erros de rede simplificado para iOS (reduz memória)
-      video.addEventListener('error', (e) => {
-        if (isIOS && video.error) {
-          // Erro de rede ou decodificação - tentar recuperar uma vez
-          if ((video.error.code === MediaError.MEDIA_ERR_NETWORK || 
-               video.error.code === MediaError.MEDIA_ERR_DECODE) &&
-              retryCount.current < 1) {
-            setTimeout(() => {
-              recoverIOSStream();
-            }, 3000);
-          }
+      ouvir(video, 'error', () => {
+        if (indisponivel || !video.error) return;
+        const recuperavel = video.error.code === MediaError.MEDIA_ERR_NETWORK
+          || video.error.code === MediaError.MEDIA_ERR_DECODE;
+        if (recuperavel && retryCount.current < 2) {
+          if (stalledTimer.current) clearTimeout(stalledTimer.current);
+          stalledTimer.current = setTimeout(() => {
+            if (!encerrado.current) recoverIOSStream();
+          }, 3000);
+          return;
         }
+        exibirIndisponivel();
       }, { passive: true });
       
-      video.addEventListener('loadedmetadata', () => {
+      ouvir(video, 'loadedmetadata', () => {
         // Safari: metadata carregada
         retryCount.current = 0; // Reset contador ao carregar metadata
         video.play()
@@ -330,7 +409,7 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
       
       // Sistema de recuperação simplificado para stalling em iOS (reduz memória)
       if (isIOS) {
-        video.addEventListener('stalled', () => {
+        ouvir(video, 'stalled', () => {
           // Limpar timer anterior se existir
           if (stalledTimer.current) {
             clearTimeout(stalledTimer.current);
@@ -338,14 +417,15 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
           
           // Aguardar 4 segundos antes de tentar recuperar (aumentado para reduzir overhead)
           stalledTimer.current = setTimeout(() => {
+            if (encerrado.current || indisponivel) return;
             if (video.readyState < 3 && !video.paused) {
               recoverIOSStream();
             }
           }, 4000);
         }, { passive: true });
         
-        video.addEventListener('waiting', () => {
-          setIsLoading(true);
+        ouvir(video, 'waiting', () => {
+          if (!indisponivel) setIsLoading(true);
           
           // Limpar timer anterior se existir
           if (stalledTimer.current) {
@@ -354,23 +434,25 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
           
           // Aguardar 6 segundos de buffering antes de recuperar
           stalledTimer.current = setTimeout(() => {
+            if (encerrado.current || indisponivel) return;
             if (video.readyState < 3 && !video.paused) {
               recoverIOSStream();
             }
           }, 6000);
         }, { passive: true });
       } else {
-        video.addEventListener('stalled', () => {
-          setIsLoading(true);
+        ouvir(video, 'stalled', () => {
+          if (!indisponivel) setIsLoading(true);
         }, { passive: true });
         
-        video.addEventListener('waiting', () => {
-          setIsLoading(true);
+        ouvir(video, 'waiting', () => {
+          if (!indisponivel) setIsLoading(true);
         }, { passive: true });
       }
       
-      video.addEventListener('playing', () => {
-        // Safari: reproduzindo
+      ouvir(video, 'playing', () => {
+        if (indisponivel) return;
+        setError(null);
         setIsLoading(false);
         
         // Limpar timers quando começar a reproduzir
@@ -385,12 +467,12 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
         }
       }, { passive: true });
       
-      video.addEventListener('canplay', () => {
+      ouvir(video, 'canplay', () => {
         // Safari: pode reproduzir
         setIsLoading(false);
       }, { passive: true });
       
-      video.addEventListener('canplaythrough', () => {
+      ouvir(video, 'canplaythrough', () => {
         // Safari: buffer suficiente para reprodução contínua
         setIsLoading(false);
         if (stalledTimer.current) {
@@ -420,6 +502,8 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
 
     // Cleanup agressivo para reduzir uso de memória no iOS
     return () => {
+      encerrado.current = true;
+      limpezas.forEach((limpar) => limpar());
       if (watchdogTimer.current) {
         clearInterval(watchdogTimer.current);
         watchdogTimer.current = null;
@@ -444,7 +528,7 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
       retryCount.current = 0;
       lastStallTime.current = 0;
     };
-  }, []);
+  }, [ciclo]);
 
   // Traduzir velocidade para texto amigável
   const getConnectionLabel = () => {
@@ -471,6 +555,14 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
       'wifi': 'text-blue-400',
     };
     return colors[connectionSpeed] || 'text-gray-400';
+  };
+
+  const tentarNovamente = () => {
+    recoveryAttempts.current = 0;
+    retryCount.current = 0;
+    setError(null);
+    setIsLoading(true);
+    setCiclo((valor) => valor + 1);
   };
 
   useEffect(() => {
@@ -504,7 +596,7 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
           />
           
           {/* Indicador de qualidade e conexão - Responsivo */}
-          {!isLoading && connectionSpeed !== 'checking' && (
+          {!isLoading && !error && connectionSpeed !== 'checking' && (
             <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-black bg-opacity-80 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs z-20 pointer-events-none">
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-white">
                 {/* Qualidade */}
@@ -545,7 +637,23 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
             </div>
           )}
           
-          {/* Error overlay - REMOVIDO a pedido do usuário */}
+          {error === 'indisponivel' && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/80 px-4" role="alert">
+              <div className="max-w-sm text-center text-white">
+                <p className="text-base font-semibold sm:text-lg">Transmissão temporariamente indisponível.</p>
+                <p className="mt-2 text-sm text-white/80">
+                  Estamos tentando restabelecer o sinal da TV Possi 16.1.
+                </p>
+                <button
+                  type="button"
+                  onClick={tentarNovamente}
+                  className="mt-4 min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
