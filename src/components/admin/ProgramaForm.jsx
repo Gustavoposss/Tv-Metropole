@@ -88,7 +88,7 @@ const ProgramaForm = ({ programa, onSubmit, onCancel, enviando }) => {
           type="text"
           value={form.titulo}
           onChange={(e) => atualizar('titulo', e.target.value)}
-          placeholder="Ex.: Metrópole em Ação"
+          placeholder="Nome do programa"
           className={inputClasse('titulo')}
         />
         {erros.titulo && <p className="mt-1 text-xs text-red-600">{erros.titulo}</p>}

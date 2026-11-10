@@ -5,9 +5,9 @@
 -- a estrutura existente da tabela "Programação" e configura as políticas
 -- de acesso (RLS): leitura pública + escrita apenas para autenticados.
 --
--- Como aplicar:
---   1. Supabase Dashboard -> SQL Editor -> cole este arquivo -> Run.
---   (ou)  supabase db push   se você usa a CLI.
+-- Histórico anterior à correção 0002. Não reaplicar depois dela:
+-- este arquivo recria políticas de escrita para qualquer autenticado.
+-- A Vercel não executa migrations.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------

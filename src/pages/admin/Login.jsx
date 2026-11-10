@@ -2,12 +2,16 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { usuarioEhAdministrador } from '../../lib/administradores';
 
 const Login = () => {
-  const { login, autenticado, carregando } = useAuth();
+  const { login, logout, autenticado, carregando, usuario } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const destino = location.state?.from?.pathname || '/admin';
+  const caminhoPedido = location.state?.from?.pathname || '';
+  const destino = caminhoPedido.startsWith('/admin') && !caminhoPedido.startsWith('//')
+    ? caminhoPedido
+    : '/admin';
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -16,7 +20,7 @@ const Login = () => {
   const [enviando, setEnviando] = useState(false);
 
   // Se já está logado, vai direto para o painel
-  if (!carregando && autenticado) {
+  if (!carregando && autenticado && usuarioEhAdministrador(usuario)) {
     return <Navigate to={destino} replace />;
   }
 
@@ -31,7 +35,12 @@ const Login = () => {
 
     setEnviando(true);
     try {
-      await login(email, senha);
+      const sessao = await login(email, senha);
+      if (!usuarioEhAdministrador(sessao?.user)) {
+        await logout();
+        setErro('Esta conta não administra a programação da TV Possi 16.1.');
+        return;
+      }
       navigate(destino, { replace: true });
     } catch (err) {
       const msg = err?.message?.includes('Invalid login')
@@ -56,7 +65,7 @@ const Login = () => {
             TV
           </div>
           <h1 className="text-2xl font-bold text-white">Painel Administrativo</h1>
-          <p className="text-slate-300 text-sm mt-1">TV Metrópole</p>
+          <p className="text-slate-300 text-sm mt-1">TV Possi 16.1</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
@@ -84,7 +93,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
-                placeholder="voce@tvmetropole.com"
+                placeholder="voce@tvpossi16.com.br"
                 className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30"
               />
             </div>
@@ -131,7 +140,7 @@ const Login = () => {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          Acesso restrito à equipe da TV Metrópole.
+          Acesso restrito à equipe da TV Possi 16.1.
         </p>
       </motion.div>
     </div>

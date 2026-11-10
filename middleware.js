@@ -87,11 +87,34 @@ const HTML = `<!DOCTYPE html>
 
 export const config = {
   runtime: 'nodejs',
-  matcher: ['/((?!api/|admin|.*\\..*).*)'],
+  matcher: ['/((?!api/|admin|.*\\..*).*)', '/robots.txt', '/sitemap.xml'],
 };
 
-export default function middleware() {
+export default function middleware(request) {
   if (process.env.MAINTENANCE_MODE !== 'true') return next();
+
+  const caminho = new URL(request.url).pathname;
+
+  if (caminho === '/robots.txt') {
+    return new Response('User-agent: *\nDisallow: /\n', {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Robots-Tag': 'noindex, nofollow',
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
+
+  if (caminho === '/sitemap.xml') {
+    return new Response('Not Found', {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Robots-Tag': 'noindex, nofollow',
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
 
   return new Response(HTML, {
     status: 503,

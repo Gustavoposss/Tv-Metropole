@@ -30,3 +30,8 @@ dist-ssr
 
 # Vercel
 .vercel
+
+# Cópias locais que não entram no portal publicado
+design-stitch/
+marca/
+supabase/backup/

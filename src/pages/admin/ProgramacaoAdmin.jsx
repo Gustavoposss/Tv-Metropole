@@ -165,7 +165,7 @@ const ProgramacaoAdmin = () => {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Programação</h1>
-          <p className="text-sm text-slate-500">Gerencie a grade de programas da TV Metrópole.</p>
+          <p className="text-sm text-slate-500">Gerencie a grade de programas da TV Possi 16.1.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button

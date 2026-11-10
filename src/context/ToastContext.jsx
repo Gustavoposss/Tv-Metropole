@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 
 const ToastContext = createContext(null);
 
@@ -36,6 +36,7 @@ export const ToastProvider = ({ children }) => {
 
   return (
     <ToastContext.Provider value={toast}>
+      <MotionConfig reducedMotion="user">
       {children}
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 w-[calc(100%-2rem)] max-w-sm">
         <AnimatePresence>
@@ -70,6 +71,7 @@ export const ToastProvider = ({ children }) => {
           })}
         </AnimatePresence>
       </div>
+      </MotionConfig>
     </ToastContext.Provider>
   );
 };

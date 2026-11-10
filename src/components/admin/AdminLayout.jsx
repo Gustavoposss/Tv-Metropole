@@ -89,7 +89,7 @@ const AdminLayout = () => {
           TV
         </div>
         <div>
-          <p className="text-sm font-semibold text-white leading-tight">TV Metrópole</p>
+          <p className="text-sm font-semibold text-white leading-tight">TV Possi 16.1</p>
           <p className="text-xs text-slate-400">Painel Admin</p>
         </div>
       </div>
@@ -138,14 +138,14 @@ const AdminLayout = () => {
         <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur lg:px-8">
           <button
             onClick={() => setMenuAberto(true)}
-            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 lg:hidden"
             aria-label="Abrir menu"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 12h18M3 6h18M3 18h18" />
             </svg>
           </button>
-          <span className="text-sm font-semibold text-slate-700 lg:hidden">TV Metrópole</span>
+          <span className="text-sm font-semibold text-slate-700 lg:hidden">TV Possi 16.1</span>
         </header>
 
         <main className="px-4 py-6 lg:px-8 lg:py-8">

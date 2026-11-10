@@ -1,4 +1,4 @@
-// Constantes e helpers compartilhados da Programação (TV Metrópole)
+// Constantes e helpers compartilhados da programação.
 
 // Dias da semana no formato armazenado na coluna "dias_semana" (array).
 // A ordem aqui define a ordenação canônica usada na tabela e na grade.

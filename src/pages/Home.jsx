@@ -1,65 +1,57 @@
-import { motion } from 'framer-motion';
-import LivePlayer from '../components/LivePlayer';
+import { lazy, Suspense, useMemo } from 'react';
+import GradeHoje from '../components/home/GradeHoje';
+import ListaASeguir from '../components/home/ListaASeguir';
+import Transmissao from '../components/home/Transmissao';
+import { useGradeAoVivo } from '../hooks/useGradeAoVivo';
+import { useMetadados } from '../hooks/useMetadados';
+import { programasDoDia } from '../lib/gradeAoVivo.js';
+
+const UltimasNoticias = lazy(() => import('../components/home/UltimasNoticias'));
 
 const Home = () => {
+  useMetadados({
+    titulo: 'TV Possi 16.1 — Ao vivo',
+    descricao: 'Assista à TV Possi 16.1 ao vivo, veja a programação de Fortaleza e as manchetes do G1.',
+    caminho: '/',
+  });
+
+  const grade = useGradeAoVivo();
+  const hoje = useMemo(
+    () => programasDoDia(grade.programas, grade.agora?.dia, grade.instante),
+    [grade.programas, grade.agora, grade.instante],
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
-      {/* Seção do Player */}
-      <section className="py-6 sm:py-8 md:py-12 px-3 sm:px-4">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-6 sm:mb-8"
-          >
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-green-800 mb-3 sm:mb-4 px-2">
-              Assista à TV Metrópole
-            </h1>
-            <p className="text-sm sm:text-base md:text-lg text-green-700 max-w-2xl mx-auto px-4">
-              Acompanhe nossa programação ao vivo diretamente do seu dispositivo. 
-              Qualidade HD disponível 24 horas por dia.
-            </p>
-          </motion.div>
-
-          {/* Player de Vídeo */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-12"
-          >
-            <LivePlayer />
-          </motion.div>
-
-          {/* Características do Serviço */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-4xl mx-auto px-4 sm:px-0"
-          >
-            <div className="text-center p-4 sm:p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-green-200 hover:scale-105 transform">
-              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">🕒</div>
-              <h3 className="text-lg sm:text-xl font-bold text-green-800 mb-1 sm:mb-2">24h no ar</h3>
-              <p className="text-sm sm:text-base text-green-700">Transmissão contínua</p>
-            </div>
-            
-            <div className="text-center p-4 sm:p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-green-200 hover:scale-105 transform">
-              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">📡</div>
-              <h3 className="text-lg sm:text-xl font-bold text-green-800 mb-1 sm:mb-2">Adaptativo</h3>
-              <p className="text-sm sm:text-base text-green-700">HD, SD e mais</p>
-            </div>
-            
-            <div className="text-center p-4 sm:p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-green-200 hover:scale-105 transform sm:col-span-2 md:col-span-1">
-              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">📱</div>
-              <h3 className="text-lg sm:text-xl font-bold text-green-800 mb-1 sm:mb-2">Multiplataforma</h3>
-              <p className="text-sm sm:text-base text-green-700">PC, Mobile e TV</p>
-            </div>
-          </motion.div>
+    <div className="bg-surface font-body text-on-surface">
+      <section
+        aria-label="Transmissão ao vivo"
+        className="mx-auto grid max-w-portal grid-cols-1 gap-6 px-4 py-4 md:px-6 md:py-8 lg:grid-cols-12 lg:gap-8"
+      >
+        <div className="min-w-0 lg:col-span-8">
+          <Transmissao
+            status={grade.status}
+            programa={grade.atual}
+            onTentar={grade.recarregar}
+          />
+        </div>
+        <div className="min-w-0 lg:col-span-4">
+          <ListaASeguir
+            status={grade.status}
+            programas={grade.proximos}
+            onTentar={grade.recarregar}
+          />
         </div>
       </section>
+      <Suspense
+        fallback={(
+          <p className="mx-auto max-w-portal px-4 py-4 font-body text-body-md text-on-surface/80 md:px-6" role="status">
+            Carregando notícias...
+          </p>
+        )}
+      >
+        <UltimasNoticias />
+      </Suspense>
+      <GradeHoje status={grade.status} itens={hoje.itens} onTentar={grade.recarregar} />
     </div>
   );
 };

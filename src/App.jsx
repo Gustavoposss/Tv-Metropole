@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import Header from './components/Header';
+import Rodape from './components/layout/Rodape';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/admin/ProtectedRoute';
@@ -25,11 +26,8 @@ const PageLoader = () =>
       <span className="sr-only">Carregando</span>
     </div>
   ) : (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto mb-4"></div>
-        <p className="text-green-800 text-lg font-medium">Carregando...</p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-surface font-body text-on-surface" role="status">
+      <p className="text-body-md">Carregando...</p>
     </div>
   );
 
@@ -41,8 +39,9 @@ const PublicLayout = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <main>
+      <main className="pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:pb-0">
         <Outlet />
+        <Rodape />
       </main>
     </div>
   );

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 
-const LivePlayer = () => {
+const LivePlayer = ({ onEstado, incorporar = false }) => {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const onEstadoRef = useRef(onEstado);
+  onEstadoRef.current = onEstado;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [connectionSpeed, setConnectionSpeed] = useState('checking');
@@ -471,9 +473,17 @@ const LivePlayer = () => {
     return colors[connectionSpeed] || 'text-gray-400';
   };
 
+  useEffect(() => {
+    const aviso = onEstadoRef.current;
+    if (!aviso) return;
+    if (error) aviso('indisponivel');
+    else if (isLoading) aviso('carregando');
+    else aviso('reproduzindo');
+  }, [error, isLoading]);
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-2 sm:px-0">
-      <div className="relative bg-black rounded-lg overflow-hidden shadow-2xl">
+    <div className={incorporar ? 'w-full' : 'w-full max-w-4xl mx-auto px-2 sm:px-0'}>
+      <div className={incorporar ? 'relative overflow-hidden bg-black' : 'relative bg-black rounded-lg overflow-hidden shadow-2xl'}>
         <div className="relative aspect-video">
           {/* Video element */}
           <video
@@ -524,7 +534,7 @@ const LivePlayer = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
                 <p className="text-lg font-medium">Carregando transmissão ao vivo...</p>
                 <p className="text-sm text-gray-300 mt-2">
-                  Conectando ao servidor da TV Metrópole...
+                  Conectando à TV Possi 16.1...
                 </p>
                 {connectionSpeed !== 'checking' && (
                   <p className="text-xs text-gray-400 mt-2">
