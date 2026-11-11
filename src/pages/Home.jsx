@@ -1,10 +1,8 @@
-import { lazy, Suspense, useMemo } from 'react';
-import GradeHoje from '../components/home/GradeHoje';
+import { lazy, Suspense } from 'react';
 import ListaASeguir from '../components/home/ListaASeguir';
 import Transmissao from '../components/home/Transmissao';
 import { useGradeAoVivo } from '../hooks/useGradeAoVivo';
 import { useMetadados } from '../hooks/useMetadados';
-import { programasDoDia } from '../lib/gradeAoVivo.js';
 
 const UltimasNoticias = lazy(() => import('../components/home/UltimasNoticias'));
 
@@ -16,10 +14,6 @@ const Home = () => {
   });
 
   const grade = useGradeAoVivo();
-  const hoje = useMemo(
-    () => programasDoDia(grade.programas, grade.agora?.dia, grade.instante),
-    [grade.programas, grade.agora, grade.instante],
-  );
 
   return (
     <div className="bg-surface font-body text-on-surface">
@@ -51,7 +45,6 @@ const Home = () => {
       >
         <UltimasNoticias />
       </Suspense>
-      <GradeHoje status={grade.status} itens={hoje.itens} onTentar={grade.recarregar} />
     </div>
   );
 };
