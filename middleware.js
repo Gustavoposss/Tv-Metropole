@@ -144,7 +144,7 @@ function htmlAviso(destino) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="robots" content="noindex, nofollow" />
+  <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#0043a8" />
   <meta name="description" content="Uma nova identidade, com a mesma missão de informar e conectar você." />
   <meta http-equiv="refresh" content="5;url=${seguro}" />
@@ -289,7 +289,7 @@ function respostaAviso(destino) {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-store',
-      'X-Robots-Tag': 'noindex, nofollow',
+      'X-Robots-Tag': 'index, follow',
     },
   });
 }

@@ -9,8 +9,6 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [ciclo, setCiclo] = useState(0);
-  const [connectionSpeed, setConnectionSpeed] = useState('checking');
-  const [currentQuality, setCurrentQuality] = useState('auto');
   const recoveryAttempts = useRef(0);
   const encerrado = useRef(false);
   const watchdogTimer = useRef(null);
@@ -41,19 +39,14 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
       
       // Detectar WiFi
       if (type === 'wifi' || type === 'ethernet') {
-        setConnectionSpeed('wifi');
         return 'wifi';
       }
       
       if (effectiveType) {
-        setConnectionSpeed(effectiveType);
         return effectiveType;
       }
     }
-    // Se não detectar, assume 4g
-    const fallback = '4g';
-    setConnectionSpeed(fallback);
-    return fallback;
+    return '4g';
   };
 
   useEffect(() => {
@@ -207,9 +200,6 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
       hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
         const level = hls.levels[data.level];
         if (level) {
-          const quality = `${level.height}p`;
-          setCurrentQuality(quality);
-          
           // FORÇAR qualidade baixa APENAS se mobile + conexão lenta (NÃO WiFi)
           if (forceConservativeMode && level.height > 480) {
             setTimeout(() => {
@@ -489,17 +479,6 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
       setIsLoading(false);
     }
 
-    // Monitorar mudanças de conexão em tempo real
-    const handleConnectionChange = () => {
-      detectConnectionSpeed();
-      // Velocidade de conexão mudou
-    };
-
-    if ('connection' in navigator) {
-      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      connection?.addEventListener('change', handleConnectionChange);
-    }
-
     // Cleanup agressivo para reduzir uso de memória no iOS
     return () => {
       encerrado.current = true;
@@ -520,42 +499,11 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
-      if ('connection' in navigator) {
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        connection?.removeEventListener('change', handleConnectionChange);
-      }
       // Limpar referências para ajudar GC no iOS
       retryCount.current = 0;
       lastStallTime.current = 0;
     };
   }, [ciclo]);
-
-  // Traduzir velocidade para texto amigável
-  const getConnectionLabel = () => {
-    const labels = {
-      'slow-2g': '2G Lento',
-      '2g': '2G',
-      '3g': '3G',
-      '4g': '4G',
-      '5g': '5G',
-      'wifi': 'WiFi',
-      'unknown': 'Desconhecida',
-      'checking': 'Verificando...'
-    };
-    return labels[connectionSpeed] || connectionSpeed;
-  };
-
-  const getConnectionColor = () => {
-    const colors = {
-      'slow-2g': 'text-red-400',
-      '2g': 'text-orange-400',
-      '3g': 'text-yellow-400',
-      '4g': 'text-green-400',
-      '5g': 'text-green-400',
-      'wifi': 'text-blue-400',
-    };
-    return colors[connectionSpeed] || 'text-gray-400';
-  };
 
   const tentarNovamente = () => {
     recoveryAttempts.current = 0;
@@ -595,30 +543,6 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
             style={{ minHeight: '200px' }}
           />
           
-          {/* Indicador de qualidade e conexão - Responsivo */}
-          {!isLoading && !error && connectionSpeed !== 'checking' && (
-            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-black bg-opacity-80 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs z-20 pointer-events-none">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-white">
-                {/* Qualidade */}
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="hidden sm:inline font-medium">📊 Qualidade:</span>
-                  <span className="sm:hidden">📊</span>
-                  <span className="text-green-400 font-semibold">{currentQuality}</span>
-                </div>
-                
-                {/* Separador - só desktop */}
-                <span className="hidden sm:inline text-gray-500">•</span>
-                
-                {/* Conexão */}
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="hidden sm:inline font-medium">📶 Conexão:</span>
-                  <span className="sm:hidden">📶</span>
-                  <span className={`${getConnectionColor()} font-semibold`}>{getConnectionLabel()}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          
           {/* Loading overlay */}
           {isLoading && (
             <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10 pointer-events-none">
@@ -628,11 +552,6 @@ const LivePlayer = ({ onEstado, incorporar = false }) => {
                 <p className="text-sm text-gray-300 mt-2">
                   Conectando à TV Possi 16.1...
                 </p>
-                {connectionSpeed !== 'checking' && (
-                  <p className="text-xs text-gray-400 mt-2">
-                    Conexão detectada: {getConnectionLabel()}
-                  </p>
-                )}
               </div>
             </div>
           )}

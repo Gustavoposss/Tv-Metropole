@@ -54,6 +54,7 @@ export function useMetadados({ titulo, descricao, caminho }) {
 
     const restaurar = [
       definirMeta('name', 'description', descricao),
+      definirMeta('name', 'robots', 'index, follow'),
       definirMeta('property', 'og:title', titulo),
       definirMeta('property', 'og:description', descricao),
       definirMeta('property', 'og:type', 'website'),
