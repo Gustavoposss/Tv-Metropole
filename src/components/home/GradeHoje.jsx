@@ -40,7 +40,7 @@ export default function GradeHoje({ status, itens, onTentar }) {
                   <span className="font-label text-label-sm uppercase text-live">No ar</span>
                 ) : null}
                 {item.continuacao ? (
-                  <span className="font-label text-label-sm text-on-surface/60">Dia anterior</span>
+                  <span className="font-label text-label-sm text-on-surface/60">Iniciado no dia anterior</span>
                 ) : null}
               </span>
             </li>

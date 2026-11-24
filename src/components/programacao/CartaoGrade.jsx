@@ -49,7 +49,7 @@ export default function CartaoGrade({ item }) {
       <div className={`min-w-0 flex-1 border-l pl-4 ${noAr ? 'border-live/30' : 'border-outline'}`}>
         <div className="mb-1 flex flex-wrap items-center gap-1.5 pr-16">
           {tipo ? <Badge variant={varianteTipo[programa.tipo] || 'primary-soft'}>{tipo.label}</Badge> : null}
-          {continuacao ? <Badge variant="secondary-soft">Dia anterior</Badge> : null}
+          {continuacao ? <Badge variant="secondary-soft">Iniciado no dia anterior</Badge> : null}
         </div>
         <h2 className={`font-title text-title-md text-on-surface ${noAr ? 'pr-16' : ''}`}>{programa.titulo}</h2>
         {programa.descricao ? (

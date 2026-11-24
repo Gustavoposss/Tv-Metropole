@@ -10,7 +10,7 @@ const montarPayload = (dados) => ({
   horario_inicio: horaParaBanco(dados.horario_inicio),
   horario_fim: horaParaBanco(dados.horario_fim),
   dias_semana: Array.isArray(dados.dias_semana) ? dados.dias_semana : [],
-  tipo: dados.tipo || 'AO VIVO',
+  tipo: dados.tipo || null,
   ativo: dados.ativo ?? true,
   imagem_url: dados.imagem_url?.trim() || null,
 });

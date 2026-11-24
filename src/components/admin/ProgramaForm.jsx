@@ -26,7 +26,7 @@ const ProgramaForm = ({ programa, onSubmit, onCancel, enviando }) => {
         dias_semana: Array.isArray(programa.dias_semana)
           ? programa.dias_semana.map(normalizarDia).filter(Boolean)
           : [],
-        tipo: programa.tipo || 'AO VIVO',
+        tipo: programa.tipo ?? '',
         ativo: programa.ativo ?? true,
         imagem_url: programa.imagem_url || '',
       });
@@ -62,7 +62,6 @@ const ProgramaForm = ({ programa, onSubmit, onCancel, enviando }) => {
       novos.horario_fim = 'A hora final não pode ser igual à inicial.';
     }
     if (!form.dias_semana.length) novos.dias_semana = 'Selecione ao menos um dia.';
-    if (!form.tipo) novos.tipo = 'Selecione o tipo.';
     setErros(novos);
     return Object.keys(novos).length === 0;
   };
@@ -150,13 +149,14 @@ const ProgramaForm = ({ programa, onSubmit, onCancel, enviando }) => {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
-            Tipo <span className="text-red-500">*</span>
+            Tipo
           </label>
           <select
             value={form.tipo}
             onChange={(e) => atualizar('tipo', e.target.value)}
             className={inputClasse('tipo')}
           >
+            <option value="">Sem modalidade</option>
             {TIPOS_PROGRAMA.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}

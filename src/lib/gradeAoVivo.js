@@ -80,6 +80,12 @@ export function diaAnterior(dia) {
   return ORDEM_DIAS[(indice + 6) % 7];
 }
 
+export function diaSeguinte(dia) {
+  const indice = ORDEM_DIAS.indexOf(dia);
+  if (indice < 0) return null;
+  return ORDEM_DIAS[(indice + 1) % 7];
+}
+
 export function cruzaMeiaNoite(programa) {
   const inicio = minutosDoHorario(programa?.horario_inicio);
   const fim = minutosDoHorario(programa?.horario_fim);
@@ -104,42 +110,50 @@ function slotContemAgora(programa, agora) {
   return agora.minutos >= inicio;
 }
 
+function porInicio(a, b) {
+  return minutosDoHorario(a.horario_inicio) - minutosDoHorario(b.horario_inicio);
+}
+
+function ocupandoMadrugada(programa, agora) {
+  const inicio = minutosDoHorario(programa?.horario_inicio);
+  const fim = minutosDoHorario(programa?.horario_fim);
+  if (inicio == null || fim == null || fim >= inicio) return false;
+  return agora.minutos < fim;
+}
+
 export function programasDoDia(programas, dia, data = new Date()) {
   const agora = partesFortaleza(data);
   const hoje = agora.dia === dia;
   const atual = hoje ? montarVisao(programas, data).atual : null;
   const ativos = (Array.isArray(programas) ? programas : []).filter((programa) => programa?.ativo !== false);
+  const anterior = diaAnterior(dia);
+  const continuacoes = ativos
+    .filter((programa) => cruzaMeiaNoite(programa) && programaValeNoDia(programa, anterior))
+    .sort(porInicio)
+    .map((programa) => ({
+      chave: `continuacao-${programa.id}`,
+      programa,
+      continuacao: true,
+      noAr: Boolean(hoje && atual && programa.id === atual.id && ocupandoMadrugada(programa, agora)),
+    }));
+  const idsNaMadrugada = new Set(
+    continuacoes.filter((item) => item.noAr).map((item) => item.programa.id),
+  );
   const itens = ativos
     .filter((programa) => programaValeNoDia(programa, dia))
-    .sort((a, b) => minutosDoHorario(a.horario_inicio) - minutosDoHorario(b.horario_inicio))
+    .sort(porInicio)
     .map((programa) => ({
       chave: String(programa.id),
       programa,
       continuacao: false,
-      noAr: Boolean(hoje && atual && programa.id === atual.id && slotContemAgora(programa, agora)),
+      noAr: Boolean(
+        hoje && atual && programa.id === atual.id
+        && !idsNaMadrugada.has(programa.id)
+        && slotContemAgora(programa, agora),
+      ),
     }));
 
-  const fim = atual ? minutosDoHorario(atual.horario_fim) : null;
-  const inicio = atual ? minutosDoHorario(atual.horario_inicio) : null;
-  const veioDoDiaAnterior = Boolean(
-    hoje && atual && cruzaMeiaNoite(atual) && fim != null && inicio != null
-    && agora.minutos < fim && agora.minutos < inicio
-    && programaValeNoDia(atual, diaAnterior(dia)),
-  );
-
-  if (veioDoDiaAnterior) {
-    itens.forEach((item) => {
-      if (item.programa.id === atual.id) item.noAr = false;
-    });
-    itens.unshift({
-      chave: `continuacao-${atual.id}`,
-      programa: atual,
-      continuacao: true,
-      noAr: true,
-    });
-  }
-
-  return { agora, atual, itens };
+  return { agora, atual, itens: [...continuacoes, ...itens] };
 }
 
 function comecaDepois(programa, data) {
@@ -156,9 +170,19 @@ export function montarVisao(programas, data = new Date()) {
     .filter((programa) => estaNoAr(programa, data))
     .sort((a, b) => inicioEfetivo(b, agora.minutos) - inicioEfetivo(a, agora.minutos));
   const atual = noAr[0] || null;
-  const proximos = ativos
-    .filter((programa) => programa !== atual && comecaDepois(programa, data))
-    .sort((a, b) => minutosDoHorario(a.horario_inicio) - minutosDoHorario(b.horario_inicio));
+  const deHoje = ativos
+    .filter((programa) => programa.id !== atual?.id && comecaDepois(programa, data))
+    .sort(porInicio);
+  const jaListados = new Set(deHoje.map((programa) => programa.id));
+  if (atual?.id != null) jaListados.add(atual.id);
+  const amanha = diaSeguinte(agora.dia);
+  const deAmanha = ativos
+    .filter((programa) => (
+      !jaListados.has(programa.id)
+      && !estaNoAr(programa, data)
+      && programaValeNoDia(programa, amanha)
+    ))
+    .sort(porInicio);
 
-  return { agora, atual, proximos };
+  return { agora, atual, proximos: [...deHoje, ...deAmanha] };
 }
