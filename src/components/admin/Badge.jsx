@@ -1,7 +1,14 @@
 import { TIPOS_PROGRAMA } from '../../utils/programacao';
 
 export const TipoBadge = ({ tipo }) => {
-  const def = TIPOS_PROGRAMA.find((t) => t.value === tipo) || TIPOS_PROGRAMA[0];
+  const def = TIPOS_PROGRAMA.find((t) => t.value === tipo);
+  if (!def) {
+    return (
+      <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+        Sem modalidade
+      </span>
+    );
+  }
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${def.cor}`}>
       {def.label}

@@ -234,6 +234,7 @@ const ImportarGradeModal = ({ aberto, onClose, programasAtuais, onAplicado }) =>
                       <span className="ml-2 text-xs text-amber-600">({a.campos.join(', ')})</span>
                     </>
                   }
+                  extra={<TipoBadge tipo={a.novo.tipo} />}
                 />
               ))}
             </Secao>

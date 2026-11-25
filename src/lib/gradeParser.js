@@ -21,7 +21,7 @@ const detectarTipo = (texto) => {
   if (t.includes('AO VIVO') || t.includes('AOVIVO')) return 'AO VIVO';
   if (t.includes('REPRISE')) return 'REPRISE';
   if (t.includes('STREAM')) return 'STREAM';
-  return 'AO VIVO';
+  return null;
 };
 
 const limparTitulo = (texto) =>
@@ -197,7 +197,7 @@ export const parsearItens = (itens) => {
 const mesclarPorPrograma = (programas) => {
   const mapa = new Map();
   for (const p of programas) {
-    const k = `${p.titulo.toLowerCase()}|${p.horario_inicio}|${p.horario_fim}|${p.tipo}`;
+    const k = `${p.titulo.toLowerCase()}|${p.horario_inicio}|${p.horario_fim}|${p.tipo ?? ''}`;
     if (mapa.has(k)) {
       const alvo = mapa.get(k);
       for (const d of p.dias_semana) if (!alvo.dias_semana.includes(d)) alvo.dias_semana.push(d);
@@ -235,7 +235,10 @@ const diferencas = (atual, novo) => {
   if (formatarHora(atual.horario_inicio) !== formatarHora(novo.horario_inicio)) campos.push('hora inicial');
   if (formatarHora(atual.horario_fim) !== formatarHora(novo.horario_fim)) campos.push('hora final');
   if (!mesmosDias(atual.dias_semana, novo.dias_semana)) campos.push('dias');
-  if ((atual.tipo || 'AO VIVO') !== (novo.tipo || 'AO VIVO')) campos.push('tipo');
+  const modalidade = (valor) => (
+    valor === 'AO VIVO' || valor === 'REPRISE' || valor === 'STREAM' ? valor : null
+  );
+  if (modalidade(atual.tipo) !== modalidade(novo.tipo)) campos.push('tipo');
   return campos;
 };
 
