@@ -9,6 +9,10 @@ const DOMINIOS_ANTIGOS = new Set([
 
 const ORIGEM_NOVA = 'https://www.tvpossi16.com.br';
 
+// Permanece desligado. O aviso "Estamos de cara nova!" continua
+// até uma autorização específica para publicar o redirecionamento 308.
+export const REDIRECIONAR_DOMINIO_ANTIGO = false;
+
 const ROTAS_EQUIVALENTES = new Set([
   '/',
   '/noticias',
@@ -294,6 +298,13 @@ function respostaAviso(destino) {
   });
 }
 
+export function respostaDominioAntigo(destino, caminho, redirecionar = REDIRECIONAR_DOMINIO_ANTIGO) {
+  if (caminho === '/robots.txt' || caminho === '/sitemap.xml' || redirecionar) {
+    return Response.redirect(destino, 308);
+  }
+  return respostaAviso(destino);
+}
+
 export const config = {
   runtime: 'nodejs',
   matcher: ['/((?!api/|.*\\..*).*)', '/robots.txt', '/sitemap.xml'],
@@ -305,10 +316,7 @@ export default function middleware(request) {
   if (ehDominioAntigo(hostname)) {
     const destino = destinoDoAviso(request.url);
     const caminho = caminhoPublico(new URL(request.url).pathname);
-    if (caminho === '/robots.txt' || caminho === '/sitemap.xml') {
-      return Response.redirect(destino, 308);
-    }
-    return respostaAviso(destino);
+    return respostaDominioAntigo(destino, caminho);
   }
 
   if (process.env.MAINTENANCE_MODE !== 'true') return next();

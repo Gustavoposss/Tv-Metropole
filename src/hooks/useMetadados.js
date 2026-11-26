@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { SITE } from '../config/site';
+import { dadosEstruturados, LOGO_URL } from '../config/seo';
 
 function definirMeta(atributo, chave, conteudo) {
   const seletor = `meta[${atributo}="${chave}"]`;
@@ -46,6 +47,29 @@ function definirCanonical(href) {
   };
 }
 
+function definirJsonLd(dados) {
+  let elemento = document.getElementById('tvpossi-dados-estruturados');
+  const criou = !elemento;
+  const anterior = elemento?.textContent ?? null;
+
+  if (!elemento) {
+    elemento = document.createElement('script');
+    elemento.type = 'application/ld+json';
+    elemento.id = 'tvpossi-dados-estruturados';
+    document.head.appendChild(elemento);
+  }
+
+  elemento.textContent = JSON.stringify(dados).replaceAll('<', '\\u003c');
+
+  return () => {
+    if (criou) {
+      elemento.remove();
+      return;
+    }
+    if (anterior !== null) elemento.textContent = anterior;
+  };
+}
+
 export function useMetadados({ titulo, descricao, caminho }) {
   useEffect(() => {
     const tituloAnterior = document.title;
@@ -59,12 +83,13 @@ export function useMetadados({ titulo, descricao, caminho }) {
       definirMeta('property', 'og:description', descricao),
       definirMeta('property', 'og:type', 'website'),
       definirMeta('property', 'og:url', url),
-      definirMeta('property', 'og:image', `${SITE.origem}/logo-tv-possi.jpg`),
+      definirMeta('property', 'og:image', LOGO_URL),
       definirMeta('property', 'og:locale', 'pt_BR'),
       definirMeta('name', 'twitter:card', 'summary'),
       definirMeta('name', 'twitter:title', titulo),
       definirMeta('name', 'twitter:description', descricao),
       definirCanonical(url),
+      definirJsonLd(dadosEstruturados({ titulo, descricao, caminho })),
     ];
 
     return () => {

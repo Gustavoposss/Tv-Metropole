@@ -26,13 +26,7 @@ export default function ProgramaAtual({ status, programa, onTentar }) {
   if (!programa) {
     return (
       <div className="border-t border-outline/70 p-4 md:p-6">
-        <p className="font-label text-label-sm uppercase text-primary">TV Possi 16.1</p>
-        <h1 className="mt-1 font-headline text-headline-md-mobile text-on-surface md:text-headline-md">
-          TV Possi 16.1
-        </h1>
-        <div className="mt-3">
-          <GradeVazia>Nenhum programa no ar neste horário.</GradeVazia>
-        </div>
+        <GradeVazia>Nenhum programa no ar neste horário.</GradeVazia>
       </div>
     );
   }
@@ -42,13 +36,13 @@ export default function ProgramaAtual({ status, programa, onTentar }) {
   return (
     <div className="border-t border-outline/70 p-4 md:p-6">
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
-        <p className="font-label text-label-sm uppercase text-primary">TV Possi 16.1</p>
+        <p className="font-label text-label-sm uppercase text-primary">No ar</p>
         {tipo ? <Badge variant="secondary-soft">{tipo.label}</Badge> : null}
         <span className="font-body text-body-md text-on-surface/60">{faixa(programa)}</span>
       </div>
-      <h1 className="font-headline text-headline-md-mobile text-on-surface md:text-headline-md">
+      <h2 className="font-headline text-headline-md-mobile text-on-surface md:text-headline-md">
         {programa.titulo}
-      </h1>
+      </h2>
       {programa.descricao ? (
         <p className="mt-1 max-w-2xl font-body text-body-md text-on-surface/75">{programa.descricao}</p>
       ) : null}

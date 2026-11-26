@@ -10,6 +10,22 @@
       "destination": "/api/rss"
     },
     {
+      "source": "/programacao",
+      "destination": "/programacao/index.html"
+    },
+    {
+      "source": "/programacao/",
+      "destination": "/programacao/index.html"
+    },
+    {
+      "source": "/noticias",
+      "destination": "/noticias/index.html"
+    },
+    {
+      "source": "/noticias/",
+      "destination": "/noticias/index.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

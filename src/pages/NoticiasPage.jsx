@@ -1,12 +1,9 @@
 import Noticias from '../components/Noticias';
+import { rotaPorCaminho } from '../config/seo';
 import { useMetadados } from '../hooks/useMetadados';
 
 const NoticiasPage = () => {
-  useMetadados({
-    titulo: 'Notícias — TV Possi 16.1',
-    descricao: 'Manchetes publicadas pelo G1. As reportagens não são produzidas pela TV Possi 16.1.',
-    caminho: '/noticias',
-  });
+  useMetadados(rotaPorCaminho('/noticias'));
 
   return (
     <div className="bg-surface font-body text-on-surface">

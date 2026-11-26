@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['middleware.js'],
+    files: ['middleware.js', 'vite.config.js', 'scripts/**/*.js'],
     languageOptions: {
       globals: globals.node,
     },

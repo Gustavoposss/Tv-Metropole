@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { rotaPorCaminho } from '../config/seo';
 import { useMetadados } from '../hooks/useMetadados';
 import { Tab, Tabs } from '../components/ui';
 import { GradeCarregando, GradeErro, GradeVazia } from '../components/home/EstadoGrade';
@@ -11,11 +12,7 @@ const Programacao = () => {
   const grade = useGradeAoVivo();
   const [dia, setDia] = useState(() => partesFortaleza().dia);
   const hoje = grade.agora?.dia;
-  useMetadados({
-    titulo: 'Programação — TV Possi 16.1',
-    descricao: 'Grade de programação da TV Possi 16.1 no horário de Fortaleza.',
-    caminho: '/programacao',
-  });
+  useMetadados(rotaPorCaminho('/programacao'));
 
   const lista = useMemo(
     () => programasDoDia(grade.programas, dia, grade.instante),
