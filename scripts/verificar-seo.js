@@ -4,8 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import middleware, {
   REDIRECIONAR_DOMINIO_ANTIGO,
-  destinoDoAviso,
-  respostaDominioAntigo,
+  ehDominioAntigo,
 } from '../middleware.js';
 import { APRESENTACAO, H1_HOME, ROTAS_SEO, urlCanonica } from '../src/config/seo.js';
 
@@ -106,31 +105,27 @@ function verificarHtml() {
 }
 
 async function verificarMiddleware() {
-  afirmar(REDIRECIONAR_DOMINIO_ANTIGO === false, 'O redirecionamento 308 do domínio antigo foi ligado.');
+  afirmar(REDIRECIONAR_DOMINIO_ANTIGO === true, 'O redirecionamento 308 do domínio antigo está desligado.');
+  afirmar(ehDominioAntigo('www.tvpossi16.com.br') === false, 'O domínio oficial entrou na lista de redirecionamento.');
+  afirmar(ehDominioAntigo('tvpossi16.com.br') === false, 'O ápice oficial entrou na lista de redirecionamento.');
 
-  const programacao = destinoDoAviso('https://www.tvmetropolecanal16.com.br/programacao?origem=seo');
-  afirmar(programacao === 'https://www.tvpossi16.com.br/programacao?origem=seo', 'O destino da programação não preserva caminho e parâmetro.');
-  afirmar(
-    destinoDoAviso('https://www.tvmetropolecanal16.com.br/admin/login?next=1') === 'https://www.tvpossi16.com.br/admin/login?next=1',
-    'O destino do painel não preserva caminho e parâmetro.',
-  );
+  const casos = [
+    ['https://www.tvmetropolecanal16.com.br/', 'https://www.tvpossi16.com.br/'],
+    ['https://www.tvmetropolecanal16.com.br/programacao', 'https://www.tvpossi16.com.br/programacao'],
+    ['https://www.tvmetropolecanal16.com.br/noticias?origem=teste', 'https://www.tvpossi16.com.br/noticias?origem=teste'],
+    ['https://www.tvmetropolecanal16.com.br/caminho-antigo?origem=teste', 'https://www.tvpossi16.com.br/'],
+    ['https://tvmetropolecanal16.com.br/programacao?origem=teste', 'https://www.tvpossi16.com.br/programacao?origem=teste'],
+  ];
 
-  const aviso = await middleware(requisicao('https://www.tvmetropolecanal16.com.br/programacao?origem=seo'));
-  const corpo = await aviso.text();
-  afirmar(aviso.status === 200, `O aviso respondeu ${aviso.status}.`);
-  afirmar(corpo.includes('Estamos de cara nova!'), 'O aviso de identidade não está presente.');
-  afirmar(corpo.includes('content="5;url=https://www.tvmetropolecanal16.com.br/programacao?origem=seo"') || corpo.includes('content="5;url=https://www.tvpossi16.com.br/programacao?origem=seo"'), 'O aviso não preserva o caminho.');
-  afirmar(aviso.headers.get('x-robots-tag') === 'index, follow', 'O aviso mudou a diretiva de indexação.');
-
-  const sitemap = await middleware(requisicao('https://www.tvmetropolecanal16.com.br/sitemap.xml'));
-  afirmar(sitemap.status === 308, `O sitemap antigo respondeu ${sitemap.status}.`);
-  afirmar(sitemap.headers.get('location') === 'https://www.tvpossi16.com.br/sitemap.xml', 'O sitemap antigo não aponta para o domínio novo.');
-
-  const futuro = respostaDominioAntigo(programacao, '/programacao', true);
-  afirmar(futuro.status === 308, `O 308 preparado respondeu ${futuro.status}.`);
-  afirmar(futuro.headers.get('location') === programacao, 'O 308 preparado não preserva o destino.');
-  const corpoFuturo = await futuro.text();
-  afirmar(!corpoFuturo.includes('Estamos de cara nova!'), 'O 308 preparado ainda devolve o aviso.');
+  for (const [origem, destino] of casos) {
+    const resposta = await middleware(requisicao(origem));
+    const corpo = await resposta.text();
+    const location = resposta.headers.get('location');
+    afirmar(resposta.status === 308, `${origem} respondeu ${resposta.status}.`);
+    afirmar(location === destino, `${origem} apontou para ${location}.`);
+    afirmar(!corpo.includes('Estamos de cara nova!'), `${origem} ainda devolve o aviso.`);
+    afirmar(location?.startsWith('https://www.tvpossi16.com.br'), `${origem} não usa o domínio oficial.`);
+  }
 
   const transmissao = fs.readFileSync(path.join(raiz, 'src', 'components', 'LivePlayer.jsx'), 'utf8');
   afirmar(

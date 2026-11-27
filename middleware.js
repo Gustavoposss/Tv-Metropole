@@ -1,5 +1,5 @@
-// O domínio antigo mostra o aviso de mudança de identidade.
-// www.tvpossi16.com.br segue para o portal. A manutenção só vale fora do domínio antigo.
+// O domínio antigo responde 308 permanente para https://www.tvpossi16.com.br.
+// O domínio novo segue para o portal. A manutenção só vale fora do domínio antigo.
 import { next } from '@vercel/functions';
 
 const DOMINIOS_ANTIGOS = new Set([
@@ -9,9 +9,8 @@ const DOMINIOS_ANTIGOS = new Set([
 
 const ORIGEM_NOVA = 'https://www.tvpossi16.com.br';
 
-// Permanece desligado. O aviso "Estamos de cara nova!" continua
-// até uma autorização específica para publicar o redirecionamento 308.
-export const REDIRECIONAR_DOMINIO_ANTIGO = false;
+// Liga o 308 permanente. O aviso de cinco segundos deixa de ser a resposta do domínio antigo.
+export const REDIRECIONAR_DOMINIO_ANTIGO = true;
 
 const ROTAS_EQUIVALENTES = new Set([
   '/',
